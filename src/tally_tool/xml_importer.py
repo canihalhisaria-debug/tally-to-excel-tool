@@ -10,21 +10,30 @@ from typing import Any
 
 import pandas as pd
 
-_INVALID_DECIMAL_ENTITIES = re.compile(
-    r"&#(?:0|1|2|3|4|5|6|7|8|11|12|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31);"
-)
-_INVALID_HEX_ENTITIES = re.compile(
-    r"&#x(?:0|1|2|3|4|5|6|7|8|B|C|E|F|10|11|12|13|14|15|16|17|18|19|1A|1B|1C|1D|1E|1F);",
-    flags=re.IGNORECASE,
-)
+_NUMERIC_ENTITY_RE = re.compile(r"&#(?P<decimal>\d+);?|&#x(?P<hex>[0-9a-fA-F]+);?", flags=re.IGNORECASE)
 _INVALID_XML_CHARS = re.compile(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]")
+
+
+def _is_valid_xml_codepoint(codepoint: int) -> bool:
+    return (
+        codepoint in (0x09, 0x0A, 0x0D)
+        or 0x20 <= codepoint <= 0xD7FF
+        or 0xE000 <= codepoint <= 0xFFFD
+        or 0x10000 <= codepoint <= 0x10FFFF
+    )
+
+
+def _strip_invalid_numeric_entity(match: re.Match[str]) -> str:
+    decimal = match.group("decimal")
+    hex_value = match.group("hex")
+    codepoint = int(decimal, 10) if decimal else int(hex_value, 16)
+    return match.group(0) if _is_valid_xml_codepoint(codepoint) else ""
 
 
 def clean_tally_xml(xml_text: str) -> str:
     """Remove invalid numeric references and disallowed control characters."""
 
-    xml_text = _INVALID_DECIMAL_ENTITIES.sub("", xml_text)
-    xml_text = _INVALID_HEX_ENTITIES.sub("", xml_text)
+    xml_text = _NUMERIC_ENTITY_RE.sub(_strip_invalid_numeric_entity, xml_text)
     return _INVALID_XML_CHARS.sub("", xml_text)
 
 
@@ -49,6 +58,16 @@ def node_text(node: ET.Element, tag_name: str) -> str:
     child = node.find(tag_name)
     if child is not None and child.text:
         return child.text.strip()
+    return ""
+
+
+def node_text_any(node: ET.Element, tag_names: list[str]) -> str:
+    """Read first non-empty child text from given tag names."""
+
+    for tag_name in tag_names:
+        value = node_text(node, tag_name)
+        if value:
+            return value
     return ""
 
 
@@ -81,12 +100,12 @@ def parse_tally_xml_content(xml_text: str) -> pd.DataFrame:
         vouchers = root.findall(".//TALLYMESSAGE/VOUCHER")
 
     for voucher in vouchers:
-        voucher_date = parse_tally_date(node_text(voucher, "DATE"))
-        voucher_type = node_text(voucher, "VOUCHERTYPENAME")
-        voucher_number = node_text(voucher, "VOUCHERNUMBER")
-        narration = node_text(voucher, "NARRATION")
-        party_ledger = node_text(voucher, "PARTYLEDGERNAME")
-        reference = node_text(voucher, "REFERENCE")
+        voucher_date = parse_tally_date(node_text_any(voucher, ["DATE", "VOUCHERDATE"]))
+        voucher_type = node_text_any(voucher, ["VOUCHERTYPENAME", "VCHTYPE"])
+        voucher_number = node_text_any(voucher, ["VOUCHERNUMBER", "VOUCHERNUM"])
+        narration = node_text_any(voucher, ["NARRATION", "BASICBUYERSSALESTAXNO"])
+        party_ledger = node_text_any(voucher, ["PARTYLEDGERNAME", "PARTYNAME", "PARTICULARS"])
+        reference = node_text_any(voucher, ["REFERENCE", "REFERENCEDATE", "BILLREF"])
         persisted_view = node_text(voucher, "PERSISTEDVIEW")
 
         ledger_entries = voucher.findall(".//ALLLEDGERENTRIES.LIST")

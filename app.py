@@ -455,17 +455,25 @@ async def process_xml(request: ProcessXMLRequest = Body(...)):
 
     filtered_df = pd.DataFrame(MEMORY_STORE[request.file_id])
 
+    if filtered_df.empty:
+        raise HTTPException(status_code=400, detail="No rows found for provided XML preview.")
+
+    if "Date" in filtered_df.columns:
+        parsed_dates = pd.to_datetime(filtered_df["Date"], errors="coerce")
+    else:
+        parsed_dates = pd.Series(pd.NaT, index=filtered_df.index)
+
     if request.from_date:
-        from_date = pd.to_datetime(request.from_date).date()
-        filtered_df = filtered_df[
-            filtered_df["Date"].apply(lambda x: bool(x) and pd.to_datetime(x).date() >= from_date)
-        ]
+        from_date = pd.to_datetime(request.from_date, errors="coerce")
+        if pd.notna(from_date):
+            filtered_df = filtered_df[parsed_dates >= from_date]
+            parsed_dates = parsed_dates.loc[filtered_df.index]
 
     if request.to_date:
-        to_date = pd.to_datetime(request.to_date).date()
-        filtered_df = filtered_df[
-            filtered_df["Date"].apply(lambda x: bool(x) and pd.to_datetime(x).date() <= to_date)
-        ]
+        to_date = pd.to_datetime(request.to_date, errors="coerce")
+        if pd.notna(to_date):
+            filtered_df = filtered_df[parsed_dates <= to_date]
+            parsed_dates = parsed_dates.loc[filtered_df.index]
 
     if request.voucher_type and request.voucher_type.lower() != "all":
         filtered_df = filtered_df[
