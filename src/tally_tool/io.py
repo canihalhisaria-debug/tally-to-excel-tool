@@ -20,6 +20,10 @@ CANONICAL_COLUMNS = {
     "type": "Voucher Type",
     "voucher no": "Voucher No",
     "voucher number": "Voucher No",
+    "party ledger / particulars": "Party",
+    "ledger name": "Ledger",
+    "dr/cr": "Dr/Cr",
+    "stock item": "Stock Item",
     "vch no": "Voucher No",
     "debit": "Debit",
     "dr": "Debit",
@@ -75,6 +79,15 @@ def standardize_transactions(uploaded_files: list[tuple[str, bytes]]) -> pd.Data
             merged[numeric_col] = pd.to_numeric(merged[numeric_col], errors="coerce").fillna(0.0)
         else:
             merged[numeric_col] = 0.0
+
+    if "Dr/Cr" in merged.columns:
+        drcr = merged["Dr/Cr"].astype(str).str.strip().str.lower()
+        merged.loc[drcr.eq("dr"), "Debit"] = merged.loc[drcr.eq("dr"), "Amount"]
+        merged.loc[drcr.eq("dr"), "Credit"] = 0.0
+        merged.loc[drcr.eq("cr"), "Credit"] = merged.loc[drcr.eq("cr"), "Amount"]
+        merged.loc[drcr.eq("cr"), "Debit"] = 0.0
+        merged.loc[drcr.eq("dr"), "Amount"] = merged.loc[drcr.eq("dr"), "Amount"].abs()
+        merged.loc[drcr.eq("cr"), "Amount"] = -merged.loc[drcr.eq("cr"), "Amount"].abs()
 
     merged["Amount"] = merged["Amount"].where(merged["Amount"].ne(0), merged["Debit"] - merged["Credit"])
 
