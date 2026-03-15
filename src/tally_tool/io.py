@@ -6,6 +6,8 @@ from io import BytesIO
 
 import pandas as pd
 
+from .xml_importer import parse_tally_xml
+
 CANONICAL_COLUMNS = {
     "date": "Date",
     "voucher date": "Date",
@@ -41,7 +43,9 @@ def _read_file_content(content: bytes, name: str) -> pd.DataFrame:
         return pd.read_csv(BytesIO(content))
     if name.lower().endswith((".xlsx", ".xlsm", ".xls")):
         return pd.read_excel(BytesIO(content))
-    raise ValueError(f"Unsupported file type for '{name}'. Use CSV or Excel.")
+    if name.lower().endswith(".xml"):
+        return parse_tally_xml(content)
+    raise ValueError(f"Unsupported file type for '{name}'. Use CSV, Excel, or XML.")
 
 
 def standardize_transactions(uploaded_files: list[tuple[str, bytes]]) -> pd.DataFrame:

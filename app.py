@@ -47,7 +47,7 @@ with st.sidebar:
     st.header("Workflow")
     st.markdown(
         """
-1. Upload one or more Tally export files (`.csv`, `.xlsx`, `.xls`).
+1. Upload one or more Tally export files (`.csv`, `.xlsx`, `.xls`, `.xml`).
 2. Apply filters and optional saved presets.
 3. Review previews, KPIs, suspicious flags, and duplicates.
 4. Export workbook and track export history.
@@ -62,7 +62,7 @@ with st.sidebar:
 
 uploaded = st.file_uploader(
     "Upload Tally export file(s)",
-    type=["csv", "xlsx", "xls", "xlsm"],
+    type=["csv", "xlsx", "xls", "xlsm", "xml"],
     accept_multiple_files=True,
 )
 
