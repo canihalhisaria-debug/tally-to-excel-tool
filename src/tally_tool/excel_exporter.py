@@ -44,8 +44,10 @@ def _write_dataframe_sheet(workbook: Workbook, name: str, data: pd.DataFrame, co
         for cell in row:
             if isinstance(cell.value, pd.Timestamp):
                 cell.number_format = config.date_output_format
-            elif isinstance(cell.value, (int, float)) and ws.cell(1, cell.column).value in {"Debit", "Credit", "Amount", "Net_Amount", "Total_Debit", "Total_Credit"}:
-                cell.number_format = config.currency_format
+            elif isinstance(cell.value, (int, float)):
+                header = str(ws.cell(1, cell.column).value or "").lower()
+                if any(token in header for token in ("debit", "credit", "amount", "gst", "expense", "total")):
+                    cell.number_format = config.currency_format
 
     ws.freeze_panes = "A2"
     _autosize_columns(ws)

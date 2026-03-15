@@ -2,14 +2,21 @@
 
 Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
 
-## Phase 1 Features
+## Extended Features
 - Import one or multiple Tally-exported files (`.csv`, `.xlsx`, `.xls`, `.xlsm`)
 - Standardize transaction columns into a canonical dataset
+- Better interactive filters in Streamlit (voucher type, ledger, party, amount range, date range, text search)
 - Generate reports:
+  - Dashboard
+  - Error Logs
   - Ledger Report
   - Voucher Register
   - Purchase Register
   - Sales Register
+  - Expense Head Analysis
+  - Journal Voucher Expense
+  - GST Summary
+  - Party-wise Summary
 - Export a formatted multi-sheet Excel workbook
 - Modular architecture prepared for future phases
 
