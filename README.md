@@ -54,5 +54,20 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+
+## Public Preview URL (Tunnel)
+You can expose the local Streamlit app with a temporary public URL:
+
+```bash
+bash scripts/start_public_preview.sh 8501
+```
+
+This script starts Streamlit and then attempts a tunnel in this order:
+1. `cloudflared` quick tunnel
+2. downloaded `/tmp/cloudflared`
+3. `npx localtunnel`
+
+> Note: tunnel availability depends on outbound network access in your environment.
+
 ## Extensibility Notes
 `TallyPhaseOneService` in `src/tally_tool/pipeline.py` acts as an orchestration boundary so later phases (e.g., validation rules, templates, scheduled jobs, additional report packs) can be plugged in without UI rewrites.
