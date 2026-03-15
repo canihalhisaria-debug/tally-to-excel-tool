@@ -71,3 +71,9 @@ This script starts the app server and then attempts a tunnel in this order:
 
 ## Extensibility Notes
 `TallyPhaseOneService` in `src/tally_tool/pipeline.py` acts as an orchestration boundary so later phases (e.g., validation rules, templates, scheduled jobs, additional report packs) can be plugged in without UI rewrites.
+
+
+## Render Start Command
+```bash
+uvicorn app:app --host 0.0.0.0 --port $PORT
+```
