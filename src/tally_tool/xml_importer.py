@@ -2,93 +2,165 @@
 
 from __future__ import annotations
 
-from io import BytesIO
+import re
 import xml.etree.ElementTree as ET
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
+_INVALID_DECIMAL_ENTITIES = re.compile(
+    r"&#(?:0|1|2|3|4|5|6|7|8|11|12|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31);"
+)
+_INVALID_HEX_ENTITIES = re.compile(
+    r"&#x(?:0|1|2|3|4|5|6|7|8|B|C|E|F|10|11|12|13|14|15|16|17|18|19|1A|1B|1C|1D|1E|1F);",
+    flags=re.IGNORECASE,
+)
+_INVALID_XML_CHARS = re.compile(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]")
 
-def _localname(tag: str) -> str:
-    return tag.split("}")[-1] if "}" in tag else tag
+
+def clean_tally_xml(xml_text: str) -> str:
+    """Remove invalid numeric references and disallowed control characters."""
+
+    xml_text = _INVALID_DECIMAL_ENTITIES.sub("", xml_text)
+    xml_text = _INVALID_HEX_ENTITIES.sub("", xml_text)
+    return _INVALID_XML_CHARS.sub("", xml_text)
 
 
-def _child_text(element: ET.Element, child_name: str) -> str:
-    for child in list(element):
-        if _localname(child.tag).upper() == child_name.upper():
-            return (child.text or "").strip()
+def parse_tally_date(raw: str) -> str:
+    """Normalize known Tally date formats to ISO-8601 date strings."""
+
+    cleaned = str(raw or "").strip()
+    if not cleaned:
+        return ""
+
+    for fmt in ("%Y%m%d", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return cleaned
+
+
+def node_text(node: ET.Element, tag_name: str) -> str:
+    """Read child text for tag_name, returning an empty string when absent."""
+
+    child = node.find(tag_name)
+    if child is not None and child.text:
+        return child.text.strip()
     return ""
 
 
-def _extract_ledger_entries(voucher_element: ET.Element) -> list[ET.Element]:
-    entries: list[ET.Element] = []
-    for node in voucher_element.iter():
-        tag = _localname(node.tag).upper()
-        if tag in {"ALLLEDGERENTRIES.LIST", "LEDGERENTRIES.LIST"}:
-            entries.append(node)
-    return entries
+def safe_float(value: str) -> float:
+    """Coerce text values to float, returning 0.0 for invalid values."""
 
-
-def _parse_tally_date(raw_date: str) -> pd.Timestamp | pd.NaT:
-    cleaned = (raw_date or "").strip()
+    cleaned = str(value or "").strip()
     if not cleaned:
-        return pd.NaT
-    if cleaned.isdigit() and len(cleaned) == 8:
-        return pd.to_datetime(cleaned, format="%Y%m%d", errors="coerce")
-    return pd.to_datetime(cleaned, errors="coerce")
+        return 0.0
+    try:
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return 0.0
 
 
-def parse_tally_xml(content: bytes) -> pd.DataFrame:
-    """Parse XML bytes and return transaction rows in canonical schema."""
+def parse_tally_xml_content(xml_text: str) -> pd.DataFrame:
+    """Parse a Tally XML string and return voucher ledger/inventory rows."""
+
+    xml_text = clean_tally_xml(xml_text)
 
     try:
-        root = ET.parse(BytesIO(content)).getroot()
+        root = ET.fromstring(xml_text)
     except ET.ParseError as exc:
-        raise ValueError(f"Invalid XML content: {exc}") from exc
+        raise ValueError(f"XML parse error: {exc}") from exc
 
-    rows: list[dict[str, object]] = []
+    rows: list[dict[str, Any]] = []
 
-    for element in root.iter():
-        tag = _localname(element.tag).upper()
-        if tag != "VOUCHER":
-            continue
+    vouchers = root.findall(".//VOUCHER")
+    if not vouchers:
+        vouchers = root.findall(".//TALLYMESSAGE/VOUCHER")
 
-        voucher_no = _child_text(element, "VOUCHERNUMBER")
-        voucher_type = _child_text(element, "VOUCHERTYPENAME") or _child_text(element, "VOUCHERTYPE")
-        narration = _child_text(element, "NARRATION")
-        date = _parse_tally_date(_child_text(element, "DATE"))
+    for voucher in vouchers:
+        voucher_date = parse_tally_date(node_text(voucher, "DATE"))
+        voucher_type = node_text(voucher, "VOUCHERTYPENAME")
+        voucher_number = node_text(voucher, "VOUCHERNUMBER")
+        narration = node_text(voucher, "NARRATION")
+        party_ledger = node_text(voucher, "PARTYLEDGERNAME")
+        reference = node_text(voucher, "REFERENCE")
+        persisted_view = node_text(voucher, "PERSISTEDVIEW")
 
-        ledger_entries = _extract_ledger_entries(element)
+        ledger_entries = voucher.findall(".//ALLLEDGERENTRIES.LIST")
+        inventory_entries = voucher.findall(".//ALLINVENTORYENTRIES.LIST")
 
-        for entry in ledger_entries:
-            ledger_name = _child_text(entry, "LEDGERNAME")
-            amount = pd.to_numeric(_child_text(entry, "AMOUNT"), errors="coerce")
-            amount_value = float(amount) if pd.notna(amount) else 0.0
-
+        if not ledger_entries and not inventory_entries:
             rows.append(
                 {
-                    "Date": date,
+                    "Date": voucher_date,
                     "Voucher Type": voucher_type,
-                    "Voucher No": voucher_no,
-                    "Ledger": ledger_name,
+                    "Voucher Number": voucher_number,
+                    "Party Ledger / Particulars": party_ledger,
+                    "Ledger Name": "",
+                    "Stock Item": "",
+                    "Amount": 0.0,
+                    "Dr/Cr": "",
                     "Narration": narration,
-                    "Amount": amount_value,
-                    "Debit": amount_value if amount_value > 0 else 0.0,
-                    "Credit": abs(amount_value) if amount_value < 0 else 0.0,
+                    "Reference": reference,
+                    "View": persisted_view,
+                }
+            )
+            continue
+
+        for entry in ledger_entries:
+            ledger_name = node_text(entry, "LEDGERNAME")
+            amount = safe_float(node_text(entry, "AMOUNT"))
+            rows.append(
+                {
+                    "Date": voucher_date,
+                    "Voucher Type": voucher_type,
+                    "Voucher Number": voucher_number,
+                    "Party Ledger / Particulars": party_ledger,
+                    "Ledger Name": ledger_name,
+                    "Stock Item": "",
+                    "Amount": abs(amount),
+                    "Dr/Cr": "Dr" if amount < 0 else "Cr",
+                    "Narration": narration,
+                    "Reference": reference,
+                    "View": persisted_view,
                 }
             )
 
-        if not ledger_entries:
+        for item in inventory_entries:
+            stock_item = node_text(item, "STOCKITEMNAME")
+            amount = safe_float(node_text(item, "AMOUNT"))
             rows.append(
                 {
-                    "Date": date,
+                    "Date": voucher_date,
                     "Voucher Type": voucher_type,
-                    "Voucher No": voucher_no,
-                    "Ledger": "",
+                    "Voucher Number": voucher_number,
+                    "Party Ledger / Particulars": party_ledger,
+                    "Ledger Name": "",
+                    "Stock Item": stock_item,
+                    "Amount": abs(amount),
+                    "Dr/Cr": "Dr" if amount < 0 else "Cr",
                     "Narration": narration,
-                    "Amount": 0.0,
-                    "Debit": 0.0,
-                    "Credit": 0.0,
+                    "Reference": reference,
+                    "View": persisted_view,
                 }
             )
 
     return pd.DataFrame(rows)
+
+
+def parse_tally_xml_file(file_path: str | Path) -> pd.DataFrame:
+    """Load and parse a Tally XML file path."""
+
+    raw = Path(file_path).read_bytes()
+    xml_text = raw.decode("utf-8", errors="ignore")
+    return parse_tally_xml_content(xml_text)
+
+
+def parse_tally_xml(content: bytes) -> pd.DataFrame:
+    """Compatibility wrapper for in-memory XML parsing."""
+
+    xml_text = content.decode("utf-8", errors="ignore")
+    return parse_tally_xml_content(xml_text)
