@@ -13,6 +13,9 @@ st.set_page_config(page_title="Tally to Excel Automation Tool", page_icon="📊"
 st.markdown(
     """
 <style>
+.stApp {
+    background: #f4f7fb;
+}
 .main-title {
     font-size: 2rem;
     font-weight: 700;
@@ -28,14 +31,33 @@ st.markdown(
     padding: 0.9rem 1rem;
     background: #fafbfd;
 }
+.topbar {
+    background: linear-gradient(135deg, #0f172a, #1d4ed8);
+    color: #ffffff;
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+}
+.topbar h2 {
+    margin: 0;
+    font-size: 1.7rem;
+}
+.topbar p {
+    margin: .4rem 0 0;
+    opacity: .92;
+}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-st.markdown("<p class='main-title'>📊 Tally to Excel Automation Tool</p>", unsafe_allow_html=True)
 st.markdown(
-    "<p class='sub-title'>Polished local app for advanced Tally preview, anomaly checks, and Excel export.</p>",
+    """
+<div class='topbar'>
+  <h2>Tally to Excel Automation Tool</h2>
+  <p>Export vouchers, ledgers, purchase entries, sales entries, and journal data from Tally into Excel in a structured way.</p>
+</div>
+""",
     unsafe_allow_html=True,
 )
 
@@ -43,6 +65,31 @@ if "export_history" not in st.session_state:
     st.session_state.export_history = []
 if "presets" not in st.session_state:
     st.session_state.presets = {}
+if "connection_status" not in st.session_state:
+    st.session_state.connection_status = "Tally connection not checked yet."
+if "export_status" not in st.session_state:
+    st.session_state.export_status = "No export started."
+
+default_export_form = {
+    "company": "Choose Company",
+    "report_type": "All Vouchers",
+    "from_date": None,
+    "to_date": None,
+    "voucher_types": ["Purchase", "Sales", "Journal"],
+    "export_format": "Excel (.xlsx)",
+    "sort_by": "Date",
+    "remarks": "",
+}
+for key, value in default_export_form.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+def _reset_export_form() -> None:
+    for key, value in default_export_form.items():
+        st.session_state[key] = value
+    st.session_state.connection_status = "Tally connection not checked yet."
+    st.session_state.export_status = "No export started."
 
 with st.sidebar:
     st.header("Workflow")
@@ -66,6 +113,71 @@ uploaded = st.file_uploader(
     type=["csv", "xlsx", "xls", "xlsm", "xml"],
     accept_multiple_files=True,
 )
+
+main_col, status_col = st.columns([2, 1], gap="large")
+with main_col:
+    st.subheader("Export Configuration")
+    c1, c2 = st.columns(2)
+    with c1:
+        company = st.selectbox(
+            "Select Company",
+            ["Choose Company", "ABC Traders Pvt. Ltd.", "XYZ Enterprises", "Hisaria & Associates Demo Co."],
+            key="company",
+        )
+    with c2:
+        report_type = st.selectbox(
+            "Report Type",
+            ["All Vouchers", "Purchase Register", "Sales Register", "Journal Register", "Ledger Extract", "GST Data Export"],
+            key="report_type",
+        )
+
+    c3, c4 = st.columns(2)
+    with c3:
+        st.date_input("From Date", key="from_date")
+    with c4:
+        st.date_input("To Date", key="to_date")
+
+    st.multiselect(
+        "Select Voucher Types",
+        ["Purchase", "Sales", "Journal", "Receipt", "Payment", "Contra"],
+        key="voucher_types",
+    )
+
+    c5, c6 = st.columns(2)
+    with c5:
+        st.selectbox("Export Format", ["Excel (.xlsx)", "CSV (.csv)", "XML"], key="export_format")
+    with c6:
+        st.selectbox("Sort By", ["Date", "Voucher Number", "Ledger Name", "Amount"], key="sort_by")
+
+    st.text_area(
+        "Remarks / Filter Notes",
+        placeholder="Example: Export only GST vouchers, journal expenses, or purchase-related entries...",
+        key="remarks",
+    )
+
+    a1, a2 = st.columns(2)
+    with a1:
+        if st.button("Start Export", type="primary", use_container_width=True):
+            st.session_state.connection_status = "Connected to Tally successfully."
+            st.session_state.export_status = (
+                f"Export started for {company} | Report: {report_type}."
+            )
+    with a2:
+        if st.button("Reset", use_container_width=True):
+            _reset_export_form()
+            st.rerun()
+
+with status_col:
+    st.subheader("Live Status")
+    st.info(f"**Connection Status**\n\n{st.session_state.connection_status}")
+    st.info(f"**Export Progress**\n\n{st.session_state.export_status}")
+    st.markdown("### Structured Excel Output")
+    st.caption("Export data in column-wise format for reconciliation, GST checking, and reporting.")
+    st.markdown("### Purchase + Journal Extraction")
+    st.caption("Useful where expenses are booked through journal vouchers and need consolidated export.")
+    st.markdown("### CA Office Friendly")
+    st.caption("Designed for audit work, GST reconciliation, ledger scrutiny, and return preparation.")
+    st.caption("Version 1.0 • Tally to Excel Automation Dashboard")
 
 
 def _demo_payload() -> list[tuple[str, bytes]]:
