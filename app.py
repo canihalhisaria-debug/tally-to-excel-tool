@@ -3,15 +3,16 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import Dict, List, Optional
 from uuid import uuid4
-import xml.etree.ElementTree as ET
 
 import pandas as pd
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel
+
+from src.tally_tool.xml_importer import parse_tally_xml_content
 
 app = FastAPI(title="Tally to Excel Backend", version="1.0.0")
 
@@ -51,7 +52,7 @@ REQUIRED_COLUMNS = [
     "amount",
 ]
 
-TEMP_DATA_STORE: Dict[str, pd.DataFrame] = {}
+MEMORY_STORE: Dict[str, List[dict]] = {}
 TEMP_OUTPUT_STORE: Dict[str, Path] = {}
 OUTPUT_DIR = Path(gettempdir()) / "tally_to_excel_outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,66 +158,6 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def parse_tally_xml(file_bytes: bytes) -> pd.DataFrame:
-    """
-    Basic Tally XML parser.
-    Standard Tally voucher export ke common nodes handle karta hai.
-    Exact company export ke hisaab se kabhi customization lag sakti hai.
-    """
-    try:
-        root = ET.fromstring(file_bytes)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"XML parse error: {str(e)}")
-
-    rows = []
-
-    vouchers = root.findall(".//VOUCHER")
-    for voucher in vouchers:
-        date = voucher.findtext("DATE", default="")
-        voucher_no = voucher.findtext("VOUCHERNUMBER", default="")
-        voucher_type = voucher.findtext("VOUCHERTYPENAME", default="")
-        narration = voucher.findtext("NARRATION", default="")
-        party_ledger = voucher.findtext("PARTYLEDGERNAME", default="")
-
-        ledger_lists = voucher.findall(".//ALLLEDGERENTRIES.LIST")
-        if not ledger_lists:
-            ledger_lists = voucher.findall(".//LEDGERENTRIES.LIST")
-
-        if ledger_lists:
-            for entry in ledger_lists:
-                ledger_name = entry.findtext("LEDGERNAME", default="")
-                amount = to_number(entry.findtext("AMOUNT", default="0"))
-                rows.append(
-                    {
-                        "date": date,
-                        "voucher_no": voucher_no,
-                        "voucher_type": voucher_type,
-                        "party_ledger": party_ledger,
-                        "ledger": ledger_name,
-                        "narration": narration,
-                        "amount": amount,
-                    }
-                )
-        else:
-            rows.append(
-                {
-                    "date": date,
-                    "voucher_no": voucher_no,
-                    "voucher_type": voucher_type,
-                    "party_ledger": party_ledger,
-                    "ledger": "",
-                    "narration": narration,
-                    "amount": 0.0,
-                }
-            )
-
-    if not rows:
-        raise HTTPException(status_code=400, detail="No vouchers found in XML file.")
-
-    df = pd.DataFrame(rows)
-    return normalize_columns(df)
-
-
 async def load_file_to_df(file: UploadFile) -> pd.DataFrame:
     filename = file.filename.lower()
     content = await file.read()
@@ -235,7 +176,8 @@ async def load_file_to_df(file: UploadFile) -> pd.DataFrame:
             return normalize_columns(df)
 
         if filename.endswith(".xml"):
-            return parse_tally_xml(content)
+            xml_text = content.decode("utf-8", errors="ignore")
+            return normalize_columns(parse_tally_xml_content(xml_text))
 
         raise HTTPException(
             status_code=400,
@@ -463,11 +405,20 @@ async def upload_xml_preview(file: UploadFile = File(...)):
     if not filename.endswith(".xml"):
         raise HTTPException(status_code=400, detail="Only XML file is supported on this endpoint.")
 
-    df = await load_file_to_df(file)
-    input_file_id = str(uuid4())
-    TEMP_DATA_STORE[input_file_id] = df
+    try:
+        content = await file.read()
+        xml_text = content.decode("utf-8", errors="ignore")
+        df = parse_tally_xml_content(xml_text)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    payload = dataframe_preview_payload(df)
+    input_file_id = str(uuid4())
+    MEMORY_STORE[input_file_id] = df.to_dict(orient="records")
+    payload = {
+        "preview": df.head(100).fillna("").to_dict(orient="records"),
+        "columns": list(df.columns),
+        "total_rows": int(len(df)),
+    }
     return {
         "file_id": input_file_id,
         **payload,
@@ -498,24 +449,35 @@ async def process_file(
 
 
 @app.post("/process-xml")
-async def process_xml(request: ProcessXMLRequest):
-    stored_df = TEMP_DATA_STORE.get(request.file_id)
-    if stored_df is None:
-        raise HTTPException(status_code=404, detail="Invalid or expired file_id.")
+async def process_xml(request: ProcessXMLRequest = Body(...)):
+    if request.file_id not in MEMORY_STORE:
+        raise HTTPException(status_code=404, detail="Uploaded file not found. Please preview XML first.")
 
-    voucher_types = request.voucher_type
-    filtered_df = apply_filters(
-        stored_df,
-        from_date=request.from_date,
-        to_date=request.to_date,
-        voucher_types=voucher_types,
-    )
+    filtered_df = pd.DataFrame(MEMORY_STORE[request.file_id])
 
-    if filtered_df.empty:
-        raise HTTPException(status_code=400, detail="No data found after applying filters.")
+    if request.from_date:
+        from_date = pd.to_datetime(request.from_date).date()
+        filtered_df = filtered_df[
+            filtered_df["Date"].apply(lambda x: bool(x) and pd.to_datetime(x).date() >= from_date)
+        ]
 
-    excel_file = build_excel_file(filtered_df, report_type="all")
-    output_file_id = save_excel_to_temp(excel_file)
+    if request.to_date:
+        to_date = pd.to_datetime(request.to_date).date()
+        filtered_df = filtered_df[
+            filtered_df["Date"].apply(lambda x: bool(x) and pd.to_datetime(x).date() <= to_date)
+        ]
+
+    if request.voucher_type and request.voucher_type.lower() != "all":
+        filtered_df = filtered_df[
+            filtered_df["Voucher Type"].astype(str).str.lower() == request.voucher_type.lower()
+        ]
+
+    output_file_id = str(uuid4())
+    output_path = OUTPUT_DIR / f"{output_file_id}.xlsx"
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        filtered_df.to_excel(writer, index=False, sheet_name="Tally Data")
+
+    TEMP_OUTPUT_STORE[output_file_id] = output_path
 
     return {
         "status": "success",
