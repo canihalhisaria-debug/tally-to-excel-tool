@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel
 
-from src.tally_tool.xml_importer import parse_tally_xml_content
+from src.tally_tool.xml_importer import parse_tally_xml
 
 app = FastAPI(title="Tally to Excel Backend", version="1.0.0")
 
@@ -176,8 +176,7 @@ async def load_file_to_df(file: UploadFile) -> pd.DataFrame:
             return normalize_columns(df)
 
         if filename.endswith(".xml"):
-            xml_text = content.decode("utf-8", errors="ignore")
-            return normalize_columns(parse_tally_xml_content(xml_text))
+            return normalize_columns(parse_tally_xml(content))
 
         raise HTTPException(
             status_code=400,
@@ -407,8 +406,7 @@ async def upload_xml_preview(file: UploadFile = File(...)):
 
     try:
         content = await file.read()
-        xml_text = content.decode("utf-8", errors="ignore")
-        df = parse_tally_xml_content(xml_text)
+        df = parse_tally_xml(content)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

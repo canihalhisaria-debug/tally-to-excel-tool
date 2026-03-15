@@ -10,21 +10,35 @@ from typing import Any
 
 import pandas as pd
 
-_INVALID_DECIMAL_ENTITIES = re.compile(
-    r"&#(?:0|1|2|3|4|5|6|7|8|11|12|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31);"
-)
-_INVALID_HEX_ENTITIES = re.compile(
-    r"&#x(?:0|1|2|3|4|5|6|7|8|B|C|E|F|10|11|12|13|14|15|16|17|18|19|1A|1B|1C|1D|1E|1F);",
-    flags=re.IGNORECASE,
-)
+_NUMERIC_ENTITY = re.compile(r"&#(x?[0-9A-Fa-f]+);")
 _INVALID_XML_CHARS = re.compile(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]")
+
+
+def _is_valid_xml_codepoint(codepoint: int) -> bool:
+    """Return True when the codepoint is valid for XML 1.0 character references."""
+
+    return (
+        codepoint in (0x09, 0x0A, 0x0D)
+        or 0x20 <= codepoint <= 0xD7FF
+        or 0xE000 <= codepoint <= 0xFFFD
+        or 0x10000 <= codepoint <= 0x10FFFF
+    )
+
+
+def _strip_invalid_numeric_entity(match: re.Match[str]) -> str:
+    """Drop numeric entities that resolve to invalid XML code points."""
+
+    raw_value = match.group(1)
+    base = 16 if raw_value.lower().startswith("x") else 10
+    digits = raw_value[1:] if base == 16 else raw_value
+    codepoint = int(digits, base)
+    return match.group(0) if _is_valid_xml_codepoint(codepoint) else ""
 
 
 def clean_tally_xml(xml_text: str) -> str:
     """Remove invalid numeric references and disallowed control characters."""
 
-    xml_text = _INVALID_DECIMAL_ENTITIES.sub("", xml_text)
-    xml_text = _INVALID_HEX_ENTITIES.sub("", xml_text)
+    xml_text = _NUMERIC_ENTITY.sub(_strip_invalid_numeric_entity, xml_text)
     return _INVALID_XML_CHARS.sub("", xml_text)
 
 
