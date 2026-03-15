@@ -1,1182 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tally to Excel Automation Tool</title>
-  <meta name="description" content="Premium software-style landing page for Tally to Excel Automation Tool." />
-  <style>
-    :root{
-      --bg:#0b1120;
-      --panel:#111827;
-      --panel-2:#172033;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --line:#dbe4f0;
-      --primary:#2563eb;
-      --primary-2:#38bdf8;
-      --green:#16a34a;
-      --orange:#f59e0b;
-      --red:#ef4444;
-      --shadow:0 20px 50px rgba(2,8,23,.15);
-      --radius:22px;
-      --max:1320px;
-    }
-
-    *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{
-      margin:0;
-      font-family:Arial, Helvetica, sans-serif;
-      background:#f4f8fc;
-      color:var(--text);
-    }
-
-    a{text-decoration:none;color:inherit}
-
-    .app-shell{
-      min-height:100vh;
-      display:grid;
-      grid-template-columns:270px 1fr;
-    }
-
-    .sidebar{
-      background:linear-gradient(180deg, #0b1120 0%, #111827 100%);
-      color:#fff;
-      padding:24px 18px;
-      position:sticky;
-      top:0;
-      height:100vh;
-      border-right:1px solid rgba(255,255,255,.06);
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:14px;
-      padding:8px 10px 20px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      margin-bottom:20px;
-    }
-
-    .brand-logo{
-      width:48px;
-      height:48px;
-      border-radius:16px;
-      display:grid;
-      place-items:center;
-      font-size:22px;
-      font-weight:800;
-      background:linear-gradient(135deg, var(--primary-2), var(--primary));
-      box-shadow:0 14px 28px rgba(37,99,235,.28);
-    }
-
-    .brand-text strong{
-      display:block;
-      font-size:20px;
-      margin-bottom:3px;
-    }
-
-    .brand-text span{
-      font-size:12px;
-      color:rgba(255,255,255,.68);
-    }
-
-    .side-title{
-      font-size:11px;
-      color:rgba(255,255,255,.5);
-      letter-spacing:1px;
-      text-transform:uppercase;
-      margin:18px 10px 10px;
-    }
-
-    .side-links{
-      display:grid;
-      gap:8px;
-    }
-
-    .side-links a{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:12px 14px;
-      border-radius:14px;
-      color:rgba(255,255,255,.84);
-      font-size:14px;
-      transition:.2s;
-    }
-
-    .side-links a:hover,
-    .side-links a.active{
-      background:rgba(255,255,255,.08);
-      color:#fff;
-    }
-
-    .side-card{
-      margin-top:20px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:18px;
-      padding:16px;
-    }
-
-    .side-card h4{
-      margin:0 0 8px;
-      font-size:16px;
-    }
-
-    .side-card p{
-      margin:0 0 12px;
-      font-size:13px;
-      color:rgba(255,255,255,.72);
-      line-height:1.6;
-    }
-
-    .side-btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:100%;
-      padding:12px 14px;
-      border-radius:12px;
-      background:linear-gradient(135deg, var(--primary-2), var(--primary));
-      color:#fff;
-      font-size:14px;
-      font-weight:700;
-    }
-
-    .main{
-      min-width:0;
-    }
-
-    .topbar{
-      position:sticky;
-      top:0;
-      z-index:40;
-      background:rgba(255,255,255,.86);
-      backdrop-filter:blur(10px);
-      border-bottom:1px solid #e5edf6;
-      padding:18px 28px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-    }
-
-    .topbar h1{
-      margin:0;
-      font-size:28px;
-    }
-
-    .topbar p{
-      margin:4px 0 0;
-      color:var(--muted);
-      font-size:14px;
-    }
-
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .top-btn{
-      padding:12px 16px;
-      border-radius:14px;
-      border:1px solid #dbe4f0;
-      background:#fff;
-      font-size:14px;
-      font-weight:700;
-      cursor:pointer;
-    }
-
-    .top-btn.primary{
-      background:linear-gradient(135deg, var(--primary-2), var(--primary));
-      color:#fff;
-      border:none;
-      box-shadow:0 14px 28px rgba(37,99,235,.2);
-    }
-
-    .content{
-      padding:28px;
-    }
-
-    .hero{
-      background:
-        radial-gradient(circle at left top, rgba(56,189,248,.18), transparent 28%),
-        radial-gradient(circle at right center, rgba(37,99,235,.16), transparent 30%),
-        linear-gradient(135deg, #0b1120, #13203b);
-      color:#fff;
-      border-radius:28px;
-      padding:34px;
-      box-shadow:0 26px 70px rgba(2,8,23,.18);
-      margin-bottom:24px;
-    }
-
-    .hero-grid{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:24px;
-      align-items:center;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.1);
-      padding:10px 14px;
-      border-radius:999px;
-      font-size:13px;
-      margin-bottom:16px;
-    }
-
-    .dot{
-      width:9px;
-      height:9px;
-      border-radius:50%;
-      background:#22c55e;
-      box-shadow:0 0 12px rgba(34,197,94,.85);
-    }
-
-    .hero h2{
-      margin:0 0 12px;
-      font-size:clamp(34px,4vw,54px);
-      line-height:1.06;
-      letter-spacing:-1px;
-    }
-
-    .hero p{
-      margin:0 0 22px;
-      max-width:720px;
-      color:rgba(255,255,255,.83);
-      font-size:17px;
-      line-height:1.7;
-    }
-
-    .hero-actions{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .hero-actions a{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding:14px 20px;
-      border-radius:16px;
-      font-weight:700;
-      font-size:15px;
-    }
-
-    .hero-actions .primary{
-      color:#fff;
-      background:linear-gradient(135deg, var(--primary-2), var(--primary));
-    }
-
-    .hero-actions .ghost{
-      color:#fff;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.14);
-    }
-
-    .hero-panel{
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:24px;
-      padding:18px;
-    }
-
-    .mini-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-    }
-
-    .mini{
-      background:#fff;
-      color:var(--text);
-      border-radius:16px;
-      padding:14px;
-    }
-
-    .mini small{
-      display:block;
-      color:var(--muted);
-      font-size:12px;
-      margin-bottom:6px;
-    }
-
-    .mini strong{
-      font-size:15px;
-      line-height:1.5;
-    }
-
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(4, 1fr);
-      gap:16px;
-      margin-bottom:24px;
-    }
-
-    .stat{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:20px;
-      box-shadow:var(--shadow);
-    }
-
-    .stat-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      margin-bottom:14px;
-    }
-
-    .stat-tag{
-      font-size:12px;
-      font-weight:700;
-      padding:7px 10px;
-      border-radius:999px;
-      background:#eff6ff;
-      color:#1d4ed8;
-      border:1px solid #bfdbfe;
-    }
-
-    .stat-value{
-      font-size:34px;
-      font-weight:800;
-      margin-bottom:6px;
-    }
-
-    .stat p{
-      margin:0;
-      font-size:14px;
-      color:var(--muted);
-      line-height:1.6;
-    }
-
-    .grid-2{
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
-      gap:18px;
-      margin-bottom:24px;
-    }
-
-    .card{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:24px;
-      padding:22px;
-      box-shadow:var(--shadow);
-      min-width:0;
-    }
-
-    .card-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      margin-bottom:18px;
-      flex-wrap:wrap;
-    }
-
-    .card-head h3{
-      margin:0;
-      font-size:24px;
-    }
-
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:700;
-      background:#ecfeff;
-      color:#0f766e;
-      border:1px solid #a5f3fc;
-    }
-
-    .upload-box{
-      border:1.5px dashed #93c5fd;
-      border-radius:18px;
-      padding:22px;
-      text-align:center;
-      background:linear-gradient(180deg, #f8fbff, #f1f7ff);
-      margin-bottom:18px;
-    }
-
-    .upload-box strong{
-      display:block;
-      font-size:18px;
-      margin-bottom:8px;
-    }
-
-    .upload-box p{
-      margin:0;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.6;
-    }
-
-    .btn-row{
-      display:flex;
-      gap:10px;
-      justify-content:center;
-      flex-wrap:wrap;
-      margin-top:16px;
-    }
-
-    .soft-btn{
-      padding:11px 16px;
-      border-radius:12px;
-      border:1px solid var(--line);
-      background:#fff;
-      cursor:pointer;
-      font-size:14px;
-      font-weight:700;
-    }
-
-    .soft-btn.primary{
-      border:none;
-      color:#fff;
-      background:linear-gradient(135deg, var(--primary-2), var(--primary));
-    }
-
-    .form-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-    }
-
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-
-    .field.full{grid-column:1 / -1}
-
-    label{
-      font-size:13px;
-      font-weight:700;
-      color:#475569;
-    }
-
-    input, select, textarea{
-      width:100%;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:13px 14px;
-      font-size:14px;
-      outline:none;
-      background:#fff;
-      transition:.2s;
-    }
-
-    input:focus, select:focus, textarea:focus{
-      border-color:#60a5fa;
-      box-shadow:0 0 0 4px rgba(96,165,250,.14);
-    }
-
-    textarea{
-      min-height:90px;
-      resize:vertical;
-    }
-
-    .status-list{
-      display:grid;
-      gap:14px;
-    }
-
-    .status{
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:16px;
-      background:#fbfdff;
-    }
-
-    .status h4{
-      margin:0 0 7px;
-      font-size:17px;
-    }
-
-    .status p{
-      margin:0;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.65;
-    }
-
-    .chip-wrap{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-top:16px;
-    }
-
-    .chip{
-      padding:9px 12px;
-      border-radius:999px;
-      border:1px solid #bfdbfe;
-      background:#eff6ff;
-      color:#1d4ed8;
-      font-size:13px;
-      font-weight:700;
-    }
-
-    .cards-3{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:18px;
-      margin-bottom:24px;
-    }
-
-    .feature{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:22px;
-      box-shadow:var(--shadow);
-    }
-
-    .icon{
-      width:54px;
-      height:54px;
-      border-radius:16px;
-      display:grid;
-      place-items:center;
-      font-size:22px;
-      background:linear-gradient(135deg, #e0f2fe, #dbeafe);
-      margin-bottom:16px;
-    }
-
-    .feature h3{
-      margin:0 0 10px;
-      font-size:22px;
-    }
-
-    .feature p{
-      margin:0;
-      color:var(--muted);
-      font-size:15px;
-      line-height:1.7;
-    }
-
-    .table-card{
-      margin-bottom:24px;
-    }
-
-    .table-wrap{
-      overflow:auto;
-      border:1px solid var(--line);
-      border-radius:18px;
-    }
-
-    table{
-      width:100%;
-      min-width:900px;
-      border-collapse:collapse;
-      background:#fff;
-    }
-
-    th, td{
-      padding:15px 16px;
-      text-align:left;
-      border-bottom:1px solid var(--line);
-      font-size:14px;
-    }
-
-    th{
-      background:#f8fbff;
-      color:#475569;
-      font-size:13px;
-      font-weight:800;
-    }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:700;
-    }
-
-    .pill.green{
-      background:#ecfdf5;
-      color:var(--green);
-      border:1px solid #bbf7d0;
-    }
-
-    .pill.orange{
-      background:#fffbeb;
-      color:#b45309;
-      border:1px solid #fde68a;
-    }
-
-    .pill.red{
-      background:#fef2f2;
-      color:#b91c1c;
-      border:1px solid #fecaca;
-    }
-
-    .faq-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:18px;
-      margin-bottom:24px;
-    }
-
-    .faq{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:20px;
-      box-shadow:var(--shadow);
-    }
-
-    .faq h4{
-      margin:0 0 10px;
-      font-size:18px;
-    }
-
-    .faq p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.7;
-      font-size:14px;
-    }
-
-    .cta{
-      background:linear-gradient(135deg, #0b1120, #1d4ed8);
-      color:#fff;
-      border-radius:28px;
-      padding:34px;
-      box-shadow:0 24px 60px rgba(2,8,23,.18);
-    }
-
-    .cta-grid{
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
-      gap:24px;
-      align-items:center;
-    }
-
-    .cta h3{
-      margin:0 0 12px;
-      font-size:36px;
-      letter-spacing:-.8px;
-    }
-
-    .cta p{
-      margin:0 0 18px;
-      color:rgba(255,255,255,.85);
-      line-height:1.7;
-      max-width:760px;
-    }
-
-    .steps{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:14px;
-    }
-
-    .step{
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      padding:16px;
-    }
-
-    .step strong{
-      display:block;
-      margin-bottom:8px;
-      font-size:15px;
-    }
-
-    .step span{
-      color:rgba(255,255,255,.8);
-      font-size:13px;
-      line-height:1.6;
-    }
-
-    .footer{
-      text-align:center;
-      color:#64748b;
-      font-size:14px;
-      padding:26px 10px 8px;
-    }
-
-    @media (max-width: 1180px){
-      .hero-grid,
-      .grid-2,
-      .cards-3,
-      .faq-grid,
-      .cta-grid,
-      .stats{
-        grid-template-columns:1fr 1fr;
-      }
-    }
-
-    @media (max-width: 900px){
-      .app-shell{
-        grid-template-columns:1fr;
-      }
-
-      .sidebar{
-        position:relative;
-        height:auto;
-      }
-
-      .hero-grid,
-      .grid-2,
-      .cards-3,
-      .faq-grid,
-      .cta-grid,
-      .stats,
-      .form-grid,
-      .mini-grid,
-      .steps{
-        grid-template-columns:1fr;
-      }
-
-      .topbar{
-        padding:18px;
-        flex-direction:column;
-        align-items:flex-start;
-      }
-
-      .content{
-        padding:18px;
-      }
-
-      .hero{
-        padding:24px;
-      }
-
-      .cta{
-        padding:24px;
-      }
-
-      .cta h3{
-        font-size:28px;
-      }
-
-      .topbar h1{
-        font-size:24px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Tally XML to Excel Tool</title>
+
+<style>
+body{
+font-family:Arial;
+background:#f5f7fb;
+padding:40px;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+h1{
+margin-bottom:10px;
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin-top:5px;
+margin-bottom:15px;
+border:1px solid #ddd;
+border-radius:5px;
+}
+
+button{
+background:#2563eb;
+color:white;
+border:none;
+padding:10px 20px;
+border-radius:5px;
+cursor:pointer;
+margin-right:10px;
+}
+
+button:hover{
+background:#1e40af;
+}
+
+pre{
+background:#111;
+color:#00ff88;
+padding:15px;
+overflow:auto;
+border-radius:5px;
+}
+
+.download{
+margin-top:20px;
+}
+</style>
 </head>
+
 <body>
-  <div class="app-shell">
 
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-logo">T</div>
-        <div class="brand-text">
-          <strong>Tally to Excel</strong>
-          <span>Automation Dashboard</span>
-        </div>
-      </div>
+<div class="container">
 
-      <div class="side-title">Navigation</div>
-      <div class="side-links">
-        <a href="#overview" class="active">🏠 Overview</a>
-        <a href="#upload">📂 Upload Center</a>
-        <a href="#modules">📊 Report Modules</a>
-        <a href="#exports">🧾 Recent Exports</a>
-        <a href="#faq">❓ FAQ</a>
-        <a href="#deploy">🚀 Deploy</a>
-      </div>
+<h1>Tally XML to Excel Converter</h1>
 
-      <div class="side-title">Info</div>
-      <div class="side-card">
-        <h4>Static + Real Tool</h4>
-        <p>
-          Yeh page GitHub Pages par rahega. Actual Tally parsing aur Excel generation
-          aapke Python / Streamlit app me chalega.
-        </p>
-        <a class="side-btn" href="https://your-streamlit-app-link-here" target="_blank">Launch Real Tool</a>
-      </div>
-    </aside>
+<p><b>Instruction:</b> Export XML from Tally and upload here.</p>
 
-    <main class="main">
-      <div class="topbar">
-        <div>
-          <h1>Tally to Excel Automation Tool</h1>
-          <p>Professional software-style landing page with dashboard preview</p>
-        </div>
+<form id="uploadForm">
 
-        <div class="top-actions">
-          <button class="top-btn">Sample Preview</button>
-          <a class="top-btn primary" href="https://your-streamlit-app-link-here" target="_blank">Open Actual App</a>
-        </div>
-      </div>
+<label>Upload Tally XML File</label>
+<input type="file" id="xml_file" accept=".xml" required>
 
-      <div class="content">
+<label>From Date</label>
+<input type="date" id="from_date">
 
-        <section class="hero" id="overview">
-          <div class="hero-grid">
-            <div>
-              <div class="eyebrow">
-                <span class="dot"></span>
-                CA office friendly data extraction workflow
-              </div>
+<label>To Date</label>
+<input type="date" id="to_date">
 
-              <h2>Tally Data ko Structured Excel Reports me Convert Karo</h2>
-              <p>
-                Upload Tally-exported files, review voucher data, filter purchase, sales, journal,
-                GST, and ledger entries, then generate clean Excel outputs for reconciliation,
-                audit scrutiny, and reporting work.
-              </p>
+<label>Voucher Type</label>
+<select id="voucher_type">
+<option value="">All</option>
+<option value="Sales">Sales</option>
+<option value="Purchase">Purchase</option>
+<option value="Receipt">Receipt</option>
+<option value="Payment">Payment</option>
+<option value="Journal">Journal</option>
+</select>
 
-              <div class="hero-actions">
-                <a href="#upload" class="primary">Go to Upload Center</a>
-                <a href="https://your-streamlit-app-link-here" target="_blank" class="ghost">Launch Real Tool</a>
-              </div>
-            </div>
+<button type="submit">Preview XML</button>
 
-            <div class="hero-panel">
-              <div class="mini-grid">
-                <div class="mini">
-                  <small>Input Types</small>
-                  <strong>CSV, XLSX, XLS, XLSM, XML</strong>
-                </div>
-                <div class="mini">
-                  <small>Main Output</small>
-                  <strong>Formatted Excel Workbook</strong>
-                </div>
-                <div class="mini">
-                  <small>Primary Use</small>
-                  <strong>Voucher & Ledger Reporting</strong>
-                </div>
-                <div class="mini">
-                  <small>Best For</small>
-                  <strong>CA, GST, Audit, Accounts</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+</form>
 
-        <section class="stats">
-          <div class="stat">
-            <div class="stat-top">
-              <span class="stat-tag">Modules</span>
-              <span>📊</span>
-            </div>
-            <div class="stat-value">10+</div>
-            <p>Purchase, Sales, Journal, GST, Ledger, Party-wise and review reports.</p>
-          </div>
+<h3>Preview Result</h3>
 
-          <div class="stat">
-            <div class="stat-top">
-              <span class="stat-tag">Files</span>
-              <span>📁</span>
-            </div>
-            <div class="stat-value">5</div>
-            <p>Common input formats supported in this product-style dashboard preview.</p>
-          </div>
+<pre id="previewBox">No data yet...</pre>
 
-          <div class="stat">
-            <div class="stat-top">
-              <span class="stat-tag">Use Case</span>
-              <span>🧾</span>
-            </div>
-            <div class="stat-value">CA</div>
-            <p>Useful for GST reconciliation, ledger scrutiny, journal expense review and audit.</p>
-          </div>
+<button id="processBtn">Generate Excel</button>
 
-          <div class="stat">
-            <div class="stat-top">
-              <span class="stat-tag">Status</span>
-              <span>✅</span>
-            </div>
-            <div class="stat-value">Live</div>
-            <p>GitHub Pages front-end is ready. Backend app can now be connected separately.</p>
-          </div>
-        </section>
+<div class="download" id="downloadSection"></div>
 
-        <section class="grid-2" id="upload">
-          <div class="card">
-            <div class="card-head">
-              <h3>Upload Center</h3>
-              <span class="badge">Demo Interface</span>
-            </div>
+</div>
 
-            <div class="upload-box">
-              <strong>Drop Tally Export Files Here</strong>
-              <p>
-                Drag and drop files or use the choose button. Static page par real upload process nahi chalega;
-                actual upload aapke deployed backend app me hoga.
-              </p>
-              <div class="btn-row">
-                <button class="soft-btn primary" type="button">Choose Files</button>
-                <button class="soft-btn" type="button">Load Sample</button>
-              </div>
-            </div>
+<script>
 
-            <div class="form-grid">
-              <div class="field">
-                <label>Company Name</label>
-                <input type="text" placeholder="Enter company name" />
-              </div>
+let uploadedFileId=null;
 
-              <div class="field">
-                <label>Financial Year</label>
-                <select>
-                  <option>2025-26</option>
-                  <option>2024-25</option>
-                  <option>2023-24</option>
-                </select>
-              </div>
+document.getElementById("uploadForm").addEventListener("submit",async function(e){
 
-              <div class="field">
-                <label>From Date</label>
-                <input type="date" />
-              </div>
+e.preventDefault()
 
-              <div class="field">
-                <label>To Date</label>
-                <input type="date" />
-              </div>
+let file=document.getElementById("xml_file").files[0]
 
-              <div class="field">
-                <label>Report Type</label>
-                <select>
-                  <option>Purchase Register</option>
-                  <option>Sales Register</option>
-                  <option>Journal Register</option>
-                  <option>Ledger Summary</option>
-                  <option>GST Summary</option>
-                  <option>Party-wise Summary</option>
-                </select>
-              </div>
+let formData=new FormData()
 
-              <div class="field">
-                <label>Export Format</label>
-                <select>
-                  <option>Excel (.xlsx)</option>
-                  <option>CSV (.csv)</option>
-                </select>
-              </div>
+formData.append("file",file)
 
-              <div class="field full">
-                <label>Filters / Notes</label>
-                <textarea placeholder="Example: only expense journals, GST-related purchase entries, party-wise sales or ledger drilldown"></textarea>
-              </div>
-            </div>
+let response=await fetch(
+"https://tally-to-excel-tool.onrender.com/upload-xml-preview",
+{
+method:"POST",
+body:formData
+})
 
-            <div class="btn-row" style="justify-content:flex-start; margin-top:18px;">
-              <button class="soft-btn primary" type="button">Generate Report</button>
-              <button class="soft-btn" type="button">Reset</button>
-            </div>
-          </div>
+let data=await response.json()
 
-          <div class="card">
-            <div class="card-head">
-              <h3>System Status</h3>
-              <span class="badge">Preview Mode</span>
-            </div>
+uploadedFileId=data.file_id
 
-            <div class="status-list">
-              <div class="status">
-                <h4>Connection Status</h4>
-                <p>GitHub Pages version me Tally backend connected nahi hota. Real tool link par live processing chalegi.</p>
-              </div>
+document.getElementById("previewBox").textContent=
+JSON.stringify(data.preview,null,2)
 
-              <div class="status">
-                <h4>Suggested Flow</h4>
-                <p>Export from Tally → Upload in tool → Preview data → Select report → Download Excel.</p>
-              </div>
+})
 
-              <div class="status">
-                <h4>Best Reports to Build Next</h4>
-                <p>Purchase Register, Journal Expense Extractor, GST Summary, Ledger Scrutiny, Suspicious Entry Review.</p>
-              </div>
-            </div>
+document.getElementById("processBtn").addEventListener("click",async function(){
 
-            <div class="chip-wrap">
-              <span class="chip">Purchase</span>
-              <span class="chip">Sales</span>
-              <span class="chip">Journal</span>
-              <span class="chip">GST</span>
-              <span class="chip">Ledger</span>
-              <span class="chip">Audit</span>
-            </div>
-          </div>
-        </section>
+if(!uploadedFileId){
+alert("Upload XML first")
+return
+}
 
-        <section class="cards-3" id="modules">
-          <div class="feature">
-            <div class="icon">🛒</div>
-            <h3>Purchase & Sales</h3>
-            <p>
-              Purchase register, sales register, party-wise grouping, voucher-wise analysis,
-              and clean Excel-ready reconciliation reports.
-            </p>
-          </div>
+let payload={
+file_id:uploadedFileId,
+from_date:document.getElementById("from_date").value,
+to_date:document.getElementById("to_date").value,
+voucher_type:document.getElementById("voucher_type").value
+}
 
-          <div class="feature">
-            <div class="icon">📚</div>
-            <h3>Voucher & Ledger</h3>
-            <p>
-              Voucher register, ledger summary, narration-based review, account head drilldown,
-              and journal extraction for expense analysis.
-            </p>
-          </div>
+let response=await fetch(
+"https://tally-to-excel-tool.onrender.com/process-xml",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify(payload)
+})
 
-          <div class="feature">
-            <div class="icon">🧠</div>
-            <h3>GST & Audit Checks</h3>
-            <p>
-              GST summary, suspicious entries, duplicate transactions, expense pattern review,
-              and audit-support output sheets.
-            </p>
-          </div>
-        </section>
+let data=await response.json()
 
-        <section class="card table-card" id="exports">
-          <div class="card-head">
-            <h3>Recent Exports Preview</h3>
-            <span class="badge">Sample Table</span>
-          </div>
+document.getElementById("downloadSection").innerHTML=
+`<a href="https://tally-to-excel-tool.onrender.com/download/${data.file_id}">
+Download Excel File
+</a>`
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Client / Company</th>
-                  <th>Report</th>
-                  <th>Period</th>
-                  <th>Status</th>
-                  <th>Output</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>15-03-2026</td>
-                  <td>ABC Traders Pvt. Ltd.</td>
-                  <td>Purchase Register</td>
-                  <td>Apr 2025 - Mar 2026</td>
-                  <td><span class="pill green">Completed</span></td>
-                  <td>Excel Workbook</td>
-                </tr>
-                <tr>
-                  <td>14-03-2026</td>
-                  <td>XYZ Enterprises</td>
-                  <td>Journal Expense Report</td>
-                  <td>FY 2025-26</td>
-                  <td><span class="pill orange">Review Pending</span></td>
-                  <td>Excel + CSV</td>
-                </tr>
-                <tr>
-                  <td>13-03-2026</td>
-                  <td>MNO Agencies</td>
-                  <td>GST Summary</td>
-                  <td>Q3 2025-26</td>
-                  <td><span class="pill green">Completed</span></td>
-                  <td>Excel Workbook</td>
-                </tr>
-                <tr>
-                  <td>12-03-2026</td>
-                  <td>PQR Industries</td>
-                  <td>Ledger Scrutiny</td>
-                  <td>Apr-Dec 2025</td>
-                  <td><span class="pill red">Connection Failed</span></td>
-                  <td>Not Generated</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+})
 
-        <section class="faq-grid" id="faq">
-          <div class="faq">
-            <h4>Kya GitHub Pages par poora software chalega?</h4>
-            <p>
-              Nahi. GitHub Pages static website hosting hai. Yahan HTML, CSS, JS landing page chalega.
-              Python, Streamlit, Tally parsing, Excel processing ke liye alag hosting chahiye.
-            </p>
-          </div>
+</script>
 
-          <div class="faq">
-            <h4>Real tool kahan deploy karna chahiye?</h4>
-            <p>
-              Streamlit Community Cloud, Render, Railway, VPS, ya kisi Python-supported hosting par.
-              Phir yahan “Launch Real Tool” button se us app ko open kara do.
-            </p>
-          </div>
-
-          <div class="faq">
-            <h4>Ab next best module kaunsa build karna chahiye?</h4>
-            <p>
-              Purchase Register + Journal Expense Extractor. Yeh dono sabse useful aur immediately office work me kaam aayenge.
-            </p>
-          </div>
-
-          <div class="faq">
-            <h4>Yeh page kaise aur strong banega?</h4>
-            <p>
-              Client logo section, pricing block, contact form, screenshots, FAQ accordion, testimonial strip,
-              aur actual app link add karne se aur professional lagega.
-            </p>
-          </div>
-        </section>
-
-        <section class="cta" id="deploy">
-          <div class="cta-grid">
-            <div>
-              <h3>Ab isko real working product me convert karo</h3>
-              <p>
-                Front-end website ab ready hai. Ab next kaam hai Python / Streamlit app ko deploy karke
-                is static page ke button se connect karna. Tab user landing page se actual report-generation tool tak ja sakega.
-              </p>
-
-              <div class="hero-actions">
-                <a href="https://your-streamlit-app-link-here" target="_blank" class="primary">Connect Real Tool</a>
-                <a href="#upload" class="ghost">Review Upload UI</a>
-              </div>
-            </div>
-
-            <div class="steps">
-              <div class="step">
-                <strong>Step 1</strong>
-                <span>Python / Streamlit app ko alag hosting par deploy karo.</span>
-              </div>
-              <div class="step">
-                <strong>Step 2</strong>
-                <span>Is HTML me actual app link replace karo.</span>
-              </div>
-              <div class="step">
-                <strong>Step 3</strong>
-                <span>Purchase, Journal, GST modules backend me connect karo.</span>
-              </div>
-              <div class="step">
-                <strong>Step 4</strong>
-                <span>Excel output ko proper branding aur formatting do.</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div class="footer">
-          Tally to Excel Automation Tool • Premium software-style GitHub Pages landing page
-        </div>
-      </div>
-    </main>
-
-  </div>
 </body>
 </html>
