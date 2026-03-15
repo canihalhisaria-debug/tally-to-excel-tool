@@ -806,7 +806,7 @@
           Yeh page GitHub Pages par rahega. Actual Tally parsing aur Excel generation
           aapke Python / Streamlit app me chalega.
         </p>
-        <a class="side-btn" href="https://your-streamlit-app-link-here" target="_blank">Launch Real Tool</a>
+        <a class="side-btn" href="#upload" data-open-upload="true">Launch Real Tool</a>
       </div>
     </aside>
 
@@ -819,7 +819,7 @@
 
         <div class="top-actions">
           <button class="top-btn">Sample Preview</button>
-          <a class="top-btn primary" href="https://your-streamlit-app-link-here" target="_blank">Open Actual App</a>
+          <a class="top-btn primary" href="#upload" data-open-upload="true">Open Actual App</a>
         </div>
       </div>
 
@@ -842,7 +842,7 @@
 
               <div class="hero-actions">
                 <a href="#upload" class="primary">Go to Upload Center</a>
-                <a href="https://your-streamlit-app-link-here" target="_blank" class="ghost">Launch Real Tool</a>
+                <a href="#upload" data-open-upload="true" class="ghost">Launch Real Tool</a>
               </div>
             </div>
 
@@ -1145,7 +1145,7 @@
               </p>
 
               <div class="hero-actions">
-                <a href="https://your-streamlit-app-link-here" target="_blank" class="primary">Connect Real Tool</a>
+                <a href="#upload" data-open-upload="true" class="primary">Connect Real Tool</a>
                 <a href="#upload" class="ghost">Review Upload UI</a>
               </div>
             </div>
@@ -1336,29 +1336,19 @@
     function wireButtons() {
       const panel = ensureToolPanel();
 
-      const uploadBtn =
-        Array.from(document.querySelectorAll("a,button")).find((el) => /upload center/i.test(el.textContent));
+      const triggerUploadPanel = function (e) {
+        e.preventDefault();
+        panel.style.display = "block";
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
 
-      const launchBtn =
-        Array.from(document.querySelectorAll("a,button")).find((el) =>
-          /launch real tool|open actual app/i.test(el.textContent)
-        );
+      const uploadTargets = Array.from(
+        document.querySelectorAll('a[data-open-upload="true"], a[href="#upload"], button')
+      ).filter((el) =>
+        /upload center|launch real tool|open actual app|connect real tool/i.test(el.textContent)
+      );
 
-      if (uploadBtn) {
-        uploadBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          panel.style.display = "block";
-          panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
-
-      if (launchBtn) {
-        launchBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          panel.style.display = "block";
-          panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
+      uploadTargets.forEach((el) => el.addEventListener("click", triggerUploadPanel));
 
       document.addEventListener("click", function (e) {
         if (e.target && e.target.id === "preview_xml_btn") {

@@ -1,13 +1,17 @@
 from io import BytesIO
-from typing import List, Optional
+from pathlib import Path
+from tempfile import gettempdir
+from typing import Dict, List, Optional
+from uuid import uuid4
 import xml.etree.ElementTree as ET
 
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from pydantic import BaseModel
 
 app = FastAPI(title="Tally to Excel Backend", version="1.0.0")
 
@@ -46,6 +50,18 @@ REQUIRED_COLUMNS = [
     "narration",
     "amount",
 ]
+
+TEMP_DATA_STORE: Dict[str, pd.DataFrame] = {}
+TEMP_OUTPUT_STORE: Dict[str, Path] = {}
+OUTPUT_DIR = Path(gettempdir()) / "tally_to_excel_outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class ProcessXMLRequest(BaseModel):
+    file_id: str
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    voucher_type: Optional[str] = None
 
 
 def clean_col_name(col: str) -> str:
@@ -259,6 +275,30 @@ def apply_filters(
     return result
 
 
+def dataframe_preview_payload(df: pd.DataFrame) -> dict:
+    preview_df = df.copy()
+    if "date" in preview_df.columns:
+        preview_df["date"] = preview_df["date"].dt.strftime("%Y-%m-%d")
+
+    preview_df = preview_df.where(pd.notna(preview_df), None)
+    preview_df = preview_df.head(100)
+
+    return {
+        "preview": preview_df.to_dict(orient="records"),
+        "columns": list(preview_df.columns),
+        "total_rows": int(len(df)),
+    }
+
+
+def save_excel_to_temp(excel_file: BytesIO) -> str:
+    output_file_id = str(uuid4())
+    output_path = OUTPUT_DIR / f"{output_file_id}.xlsx"
+    with output_path.open("wb") as f:
+        f.write(excel_file.getvalue())
+
+    TEMP_OUTPUT_STORE[output_file_id] = output_path
+    return output_file_id
+
 def build_purchase_register(df: pd.DataFrame) -> pd.DataFrame:
     mask = df["voucher_type"].str.lower().str.contains("purchase", na=False)
     cols = ["date", "voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "abs_amount"]
@@ -406,20 +446,32 @@ async def preview_file(
 ):
     df = await load_file_to_df(file)
     df = apply_filters(df, from_date=from_date, to_date=to_date, voucher_types=voucher_types)
-
-    preview_df = df.copy()
-    if "date" in preview_df.columns:
-        preview_df["date"] = preview_df["date"].dt.strftime("%Y-%m-%d")
-
-    preview_df = preview_df.head(100)
+    payload = dataframe_preview_payload(df)
 
     return JSONResponse(
         {
-            "rows": preview_df.to_dict(orient="records"),
-            "columns": list(preview_df.columns),
-            "total_rows": int(len(df)),
+            "rows": payload["preview"],
+            "columns": payload["columns"],
+            "total_rows": payload["total_rows"],
         }
     )
+
+
+@app.post("/upload-xml-preview")
+async def upload_xml_preview(file: UploadFile = File(...)):
+    filename = (file.filename or "").lower()
+    if not filename.endswith(".xml"):
+        raise HTTPException(status_code=400, detail="Only XML file is supported on this endpoint.")
+
+    df = await load_file_to_df(file)
+    input_file_id = str(uuid4())
+    TEMP_DATA_STORE[input_file_id] = df
+
+    payload = dataframe_preview_payload(df)
+    return {
+        "file_id": input_file_id,
+        **payload,
+    }
 
 
 @app.post("/process")
@@ -442,4 +494,44 @@ async def process_file(
         excel_file,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="tally_report_{report_type}.xlsx"'},
+    )
+
+
+@app.post("/process-xml")
+async def process_xml(request: ProcessXMLRequest):
+    stored_df = TEMP_DATA_STORE.get(request.file_id)
+    if stored_df is None:
+        raise HTTPException(status_code=404, detail="Invalid or expired file_id.")
+
+    voucher_types = request.voucher_type
+    filtered_df = apply_filters(
+        stored_df,
+        from_date=request.from_date,
+        to_date=request.to_date,
+        voucher_types=voucher_types,
+    )
+
+    if filtered_df.empty:
+        raise HTTPException(status_code=400, detail="No data found after applying filters.")
+
+    excel_file = build_excel_file(filtered_df, report_type="all")
+    output_file_id = save_excel_to_temp(excel_file)
+
+    return {
+        "status": "success",
+        "file_id": output_file_id,
+        "rows_after_filter": int(len(filtered_df)),
+    }
+
+
+@app.get("/download/{file_id}")
+async def download_file(file_id: str):
+    file_path = TEMP_OUTPUT_STORE.get(file_id)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found or expired.")
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=f"tally_report_{file_id}.xlsx",
     )
