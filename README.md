@@ -3,7 +3,7 @@
 Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
 
 ## Extended Features
-- Import one or multiple Tally-exported files (`.csv`, `.xlsx`, `.xls`, `.xlsm`)
+- Import one or multiple Tally-exported files (`.csv`, `.xlsx`, `.xls`, `.xlsm`, `.xml`)
 - Standardize transaction columns into a canonical dataset
 - Polished Streamlit UI with branding/logo support
 - Better interactive filters with saved presets
@@ -39,6 +39,7 @@ Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
     ├── __init__.py
     ├── config.py
     ├── io.py
+    ├── xml_importer.py
     ├── models.py
     ├── pipeline.py
     ├── reports.py
