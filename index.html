@@ -1178,5 +1178,200 @@
     </main>
 
   </div>
+
+  <script>
+    const API_BASE = "https://tally-to-excel-tool.onrender.com";
+
+    function ensureToolPanel() {
+      let panel = document.getElementById("xml-tool-panel");
+      if (panel) return panel;
+
+      panel = document.createElement("section");
+      panel.id = "xml-tool-panel";
+      panel.style.margin = "24px";
+      panel.style.padding = "20px";
+      panel.style.background = "#ffffff";
+      panel.style.borderRadius = "16px";
+      panel.style.boxShadow = "0 10px 30px rgba(0,0,0,0.08)";
+      panel.style.display = "none";
+
+      panel.innerHTML = `
+        <h2 style="margin-top:0;">Tally XML Upload Center</h2>
+        <p style="margin-bottom:16px;">Export XML from Tally and upload here.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+          <div>
+            <label><strong>XML File</strong></label>
+            <input id="xml_file" type="file" accept=".xml" style="display:block;width:100%;margin-top:8px;" />
+          </div>
+
+          <div>
+            <label><strong>From Date</strong></label>
+            <input id="from_date" type="date" style="display:block;width:100%;margin-top:8px;" />
+          </div>
+
+          <div>
+            <label><strong>To Date</strong></label>
+            <input id="to_date" type="date" style="display:block;width:100%;margin-top:8px;" />
+          </div>
+
+          <div>
+            <label><strong>Voucher Type</strong></label>
+            <select id="voucher_type" style="display:block;width:100%;margin-top:8px;">
+              <option value="">All</option>
+              <option value="Sales">Sales</option>
+              <option value="Purchase">Purchase</option>
+              <option value="Receipt">Receipt</option>
+              <option value="Payment">Payment</option>
+              <option value="Journal">Journal</option>
+              <option value="Contra">Contra</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;">
+          <button id="preview_xml_btn" type="button">Preview XML</button>
+          <button id="process_xml_btn" type="button">Generate Excel</button>
+        </div>
+
+        <div style="margin-top:18px;">
+          <h3>Preview Result</h3>
+          <pre id="preview_output" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:12px;overflow:auto;max-height:420px;">No preview yet.</pre>
+        </div>
+
+        <div id="download_section" style="margin-top:16px;"></div>
+      `;
+
+      const target =
+        document.querySelector("main") ||
+        document.querySelector(".main-content") ||
+        document.body;
+
+      target.appendChild(panel);
+      return panel;
+    }
+
+    let uploadedFileId = null;
+
+    async function previewXml() {
+      const fileInput = document.getElementById("xml_file");
+      const output = document.getElementById("preview_output");
+
+      if (!fileInput.files.length) {
+        alert("Please choose XML file first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      output.textContent = "Uploading and parsing XML...";
+
+      try {
+        const response = await fetch(`${API_BASE}/upload-xml-preview`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Preview failed");
+        }
+
+        uploadedFileId = data.file_id;
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    async function processXml() {
+      const output = document.getElementById("preview_output");
+      const downloadSection = document.getElementById("download_section");
+
+      if (!uploadedFileId) {
+        alert("Please preview XML first.");
+        return;
+      }
+
+      const payload = {
+        file_id: uploadedFileId,
+        from_date: document.getElementById("from_date").value || null,
+        to_date: document.getElementById("to_date").value || null,
+        voucher_type: document.getElementById("voucher_type").value || null,
+      };
+
+      output.textContent = "Processing XML and generating Excel...";
+
+      try {
+        const response = await fetch(`${API_BASE}/process-xml`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Processing failed");
+        }
+
+        output.textContent = JSON.stringify(data, null, 2);
+
+        downloadSection.innerHTML = `
+          <a href="${API_BASE}/download/${data.file_id}"
+             target="_blank"
+             style="display:inline-block;padding:12px 18px;background:#2563eb;color:white;border-radius:10px;text-decoration:none;">
+            Download Excel
+          </a>
+        `;
+      } catch (err) {
+        output.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    function wireButtons() {
+      const panel = ensureToolPanel();
+
+      const uploadBtn =
+        Array.from(document.querySelectorAll("a,button")).find((el) => /upload center/i.test(el.textContent));
+
+      const launchBtn =
+        Array.from(document.querySelectorAll("a,button")).find((el) =>
+          /launch real tool|open actual app/i.test(el.textContent)
+        );
+
+      if (uploadBtn) {
+        uploadBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          panel.style.display = "block";
+          panel.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+
+      if (launchBtn) {
+        launchBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          panel.style.display = "block";
+          panel.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "preview_xml_btn") {
+          previewXml();
+        }
+        if (e.target && e.target.id === "process_xml_btn") {
+          processXml();
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", wireButtons);
+  </script>
+
 </body>
 </html>
