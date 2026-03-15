@@ -93,9 +93,17 @@ with col3:
     party_options = sorted([x for x in transactions["Party"].dropna().astype(str).unique()]) if "Party" in transactions else []
     selected_parties = st.multiselect("Party", options=party_options, default=[])
 with col4:
-    min_amt = float(transactions["Amount"].min()) if not transactions.empty else 0.0
-    max_amt = float(transactions["Amount"].max()) if not transactions.empty else 0.0
-    amount_range = st.slider("Amount Range", min_value=min_amt, max_value=max_amt, value=(min_amt, max_amt))
+    amount_series = pd.to_numeric(transactions.get("Amount", pd.Series(dtype=float)), errors="coerce").dropna()
+    if amount_series.empty:
+        min_amt, max_amt = 0.0, 0.0
+    else:
+        min_amt, max_amt = float(amount_series.min()), float(amount_series.max())
+
+    if min_amt < max_amt:
+        amount_range = st.slider("Amount Range", min_value=min_amt, max_value=max_amt, value=(min_amt, max_amt))
+    else:
+        amount_range = (min_amt, max_amt)
+        st.caption("Amount range filter is fixed because all transactions have the same amount.")
 
 selected_dates = None
 if "Date" in transactions and transactions["Date"].notna().any():
