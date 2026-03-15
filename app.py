@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from io import StringIO
 
 import pandas as pd
 import streamlit as st
@@ -66,12 +67,30 @@ uploaded = st.file_uploader(
     accept_multiple_files=True,
 )
 
-if not uploaded:
-    st.info("Upload at least one file to begin.")
+
+def _demo_payload() -> list[tuple[str, bytes]]:
+    """Provide a tiny in-memory dataset so users can explore the UI without real files."""
+
+    sample_csv = StringIO(
+        "Date,Voucher Type,Voucher No,Ledger,Party,Narration,Debit,Credit\n"
+        "2025-01-01,Sales,1001,Sales A/c,ABC Traders,Invoice INV-1001,25000,0\n"
+        "2025-01-01,Receipt,RCPT-01,Cash,ABC Traders,Payment received,0,15000\n"
+        "2025-01-02,Purchase,2001,Purchase A/c,XYZ Supplies,Office stationery,0,5200\n"
+        "2025-01-03,Journal,JV-09,Indirect Expenses,,Round-off entry,450,0\n"
+        "2025-01-03,Sales,1002,Sales A/c,LMN Retail,Invoice INV-1002,18000,0\n"
+    ).getvalue()
+    return [("demo_transactions.csv", sample_csv.encode("utf-8"))]
+
+source_payload = [(f.name, f.getvalue()) for f in uploaded] if uploaded else []
+if not source_payload:
+    st.info("Upload at least one file to begin, or use demo mode to preview the software.")
+    if st.button("Try demo data"):
+        source_payload = _demo_payload()
+
+if not source_payload:
     st.stop()
 
 service = TallyPhaseOneService()
-source_payload = [(f.name, f.getvalue()) for f in uploaded]
 
 try:
     standardized, report_bundle, excel_bytes = service.run(source_payload)
