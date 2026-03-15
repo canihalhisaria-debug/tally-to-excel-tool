@@ -4,84 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tally to Excel Automation Tool</title>
-  <meta name="description" content="Professional landing page for Tally to Excel Automation Tool with reports, workflow, and setup guidance." />
+  <meta name="description" content="Tally to Excel Automation Tool landing page with software-style dashboard UI." />
   <style>
     :root{
-      --bg:#0b1220;
-      --bg-soft:#111a2e;
+      --bg:#081120;
+      --bg2:#0f1b33;
+      --panel:#0f172a;
+      --panel2:#111c34;
       --card:#ffffff;
-      --text:#111827;
-      --muted:#6b7280;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#dbe3ef;
+      --white:#ffffff;
       --primary:#2563eb;
-      --primary-dark:#1d4ed8;
-      --accent:#0ea5e9;
-      --border:#e5e7eb;
+      --primary2:#38bdf8;
       --success:#16a34a;
       --warning:#f59e0b;
-      --shadow:0 20px 50px rgba(2, 8, 23, .10);
+      --shadow:0 18px 50px rgba(2,8,23,.16);
       --radius:22px;
-      --max:1200px;
+      --max:1250px;
     }
 
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
     body{
       margin:0;
-      font-family:Inter, Arial, Helvetica, sans-serif;
-      background:#f4f7fb;
+      font-family:Arial, Helvetica, sans-serif;
+      background:#f3f7fc;
       color:var(--text);
-      line-height:1.5;
     }
 
     a{text-decoration:none;color:inherit}
+
     .container{
       width:min(var(--max), calc(100% - 32px));
       margin:auto;
     }
 
-    .nav{
+    .navbar{
       position:sticky;
       top:0;
-      z-index:50;
-      backdrop-filter: blur(12px);
-      background:rgba(11,18,32,.82);
+      z-index:100;
+      background:rgba(15, 23, 42, .92);
+      backdrop-filter:blur(10px);
       border-bottom:1px solid rgba(255,255,255,.08);
     }
 
     .nav-inner{
-      min-height:72px;
+      min-height:76px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:16px;
+      gap:20px;
     }
 
     .brand{
       display:flex;
       align-items:center;
-      gap:12px;
+      gap:14px;
       color:#fff;
       font-weight:800;
-      letter-spacing:.2px;
+      font-size:20px;
     }
 
-    .brand-mark{
-      width:42px;
-      height:42px;
-      border-radius:14px;
-      background:linear-gradient(135deg, var(--accent), var(--primary));
+    .brand-logo{
+      width:48px;
+      height:48px;
+      border-radius:16px;
       display:grid;
       place-items:center;
-      font-size:18px;
-      box-shadow:0 10px 25px rgba(37,99,235,.35);
+      background:linear-gradient(135deg, var(--primary2), var(--primary));
+      box-shadow:0 16px 30px rgba(37,99,235,.28);
+      font-size:22px;
+      font-weight:800;
     }
 
     .nav-links{
       display:flex;
       align-items:center;
-      gap:20px;
+      gap:24px;
       color:rgba(255,255,255,.88);
-      font-size:14px;
+      font-size:15px;
       flex-wrap:wrap;
     }
 
@@ -89,53 +92,53 @@
 
     .hero{
       background:
-        radial-gradient(circle at top left, rgba(14,165,233,.28), transparent 30%),
-        radial-gradient(circle at top right, rgba(37,99,235,.25), transparent 30%),
-        linear-gradient(135deg, #0b1220 0%, #111a2e 100%);
+        radial-gradient(circle at left top, rgba(56,189,248,.16), transparent 26%),
+        radial-gradient(circle at right top, rgba(37,99,235,.20), transparent 28%),
+        linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
       color:#fff;
-      padding:72px 0 52px;
-      overflow:hidden;
+      padding:70px 0 60px;
     }
 
     .hero-grid{
       display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:32px;
+      grid-template-columns:1.05fr .95fr;
+      gap:34px;
       align-items:center;
     }
 
     .eyebrow{
       display:inline-flex;
       align-items:center;
-      gap:8px;
-      padding:8px 14px;
+      gap:10px;
+      padding:10px 16px;
       border-radius:999px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.14);
-      font-size:13px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      font-size:14px;
       margin-bottom:18px;
     }
 
-    .dot{
-      width:8px;
-      height:8px;
+    .pulse{
+      width:9px;
+      height:9px;
       border-radius:50%;
       background:#22c55e;
-      box-shadow:0 0 12px rgba(34,197,94,.8);
+      box-shadow:0 0 10px rgba(34,197,94,.9);
     }
 
     .hero h1{
-      margin:0 0 14px;
-      font-size:clamp(34px, 5vw, 58px);
+      margin:0 0 16px;
+      font-size:clamp(38px, 5vw, 64px);
       line-height:1.05;
-      letter-spacing:-1.3px;
+      letter-spacing:-1.5px;
     }
 
     .hero p{
-      margin:0 0 24px;
-      color:rgba(255,255,255,.82);
+      margin:0 0 26px;
+      max-width:720px;
       font-size:17px;
-      max-width:640px;
+      line-height:1.65;
+      color:rgba(255,255,255,.84);
     }
 
     .hero-actions{
@@ -146,48 +149,50 @@
     }
 
     .btn{
+      border:none;
+      cursor:pointer;
+      padding:14px 22px;
+      border-radius:16px;
+      font-size:15px;
+      font-weight:700;
+      transition:.22s ease;
       display:inline-flex;
       align-items:center;
       justify-content:center;
       gap:10px;
-      border:none;
-      cursor:pointer;
-      padding:14px 20px;
-      border-radius:14px;
-      font-weight:700;
-      transition:.22s ease;
     }
 
     .btn-primary{
-      background:linear-gradient(135deg, var(--accent), var(--primary));
       color:#fff;
-      box-shadow:0 16px 35px rgba(37,99,235,.28);
+      background:linear-gradient(135deg, var(--primary2), var(--primary));
+      box-shadow:0 18px 32px rgba(37,99,235,.26);
     }
 
     .btn-primary:hover{transform:translateY(-1px)}
-    .btn-ghost{
+
+    .btn-outline{
       color:#fff;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.05);
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.14);
     }
 
     .hero-stats{
       display:grid;
       grid-template-columns:repeat(3, 1fr);
-      gap:14px;
+      gap:16px;
     }
 
     .stat{
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.1);
+      padding:18px;
       border-radius:18px;
-      padding:16px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
     }
 
     .stat strong{
       display:block;
-      font-size:24px;
-      margin-bottom:4px;
+      font-size:30px;
+      margin-bottom:6px;
     }
 
     .stat span{
@@ -195,112 +200,192 @@
       color:rgba(255,255,255,.74);
     }
 
-    .hero-card{
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:26px;
+    .dashboard-shell{
+      background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:28px;
       padding:22px;
-      box-shadow:0 20px 60px rgba(2,8,23,.25);
+      box-shadow:0 28px 70px rgba(2,8,23,.26);
     }
 
-    .panel{
+    .dash-grid{
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      gap:18px;
+    }
+
+    .dash-card{
       background:#fff;
       color:var(--text);
-      border-radius:18px;
-      padding:18px;
+      border-radius:20px;
+      padding:20px;
       box-shadow:var(--shadow);
     }
 
-    .panel + .panel{margin-top:16px}
+    .dash-card h3{
+      margin:0 0 14px;
+      font-size:22px;
+    }
 
-    .panel-head{
+    .dash-top{
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:12px;
-      margin-bottom:14px;
+      margin-bottom:16px;
     }
 
-    .panel-title{
-      font-weight:800;
-      font-size:16px;
-    }
-
-    .badge{
+    .mini-badge{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      font-size:12px;
-      padding:7px 10px;
+      padding:8px 12px;
       border-radius:999px;
+      font-size:12px;
+      font-weight:700;
       background:#ecfeff;
       color:#0f766e;
       border:1px solid #a5f3fc;
-      font-weight:700;
     }
 
-    .mini-grid{
+    .form-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
+      gap:14px;
     }
 
     .field{
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:12px;
-      background:#fafcff;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
     }
 
-    .field small{
-      display:block;
-      color:var(--muted);
-      font-size:12px;
-      margin-bottom:4px;
-    }
+    .field.full{grid-column:1 / -1}
 
-    .field strong{
-      font-size:14px;
-    }
-
-    .table-wrap{
-      overflow:auto;
-      border:1px solid var(--border);
-      border-radius:16px;
-    }
-
-    table{
-      width:100%;
-      border-collapse:collapse;
-      min-width:520px;
-      background:#fff;
-    }
-
-    th,td{
-      text-align:left;
-      padding:12px 14px;
-      border-bottom:1px solid var(--border);
-      font-size:14px;
-    }
-
-    th{
-      background:#f8fafc;
+    label{
       font-size:13px;
+      font-weight:700;
       color:#475569;
-      font-weight:800;
+    }
+
+    input, select, textarea{
+      width:100%;
+      padding:13px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      font-size:14px;
+      outline:none;
+      background:#fff;
+      transition:.2s;
+    }
+
+    input:focus, select:focus, textarea:focus{
+      border-color:#60a5fa;
+      box-shadow:0 0 0 4px rgba(96,165,250,.15);
+    }
+
+    textarea{
+      resize:vertical;
+      min-height:90px;
+    }
+
+    .upload-box{
+      border:1.5px dashed #93c5fd;
+      background:linear-gradient(180deg, #f8fbff, #f2f7ff);
+      border-radius:18px;
+      padding:20px;
+      text-align:center;
+    }
+
+    .upload-box strong{
+      display:block;
+      margin-bottom:8px;
+      font-size:16px;
+    }
+
+    .upload-box p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+    }
+
+    .upload-actions{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+
+    .soft-btn{
+      padding:11px 16px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-weight:700;
+      font-size:14px;
+      cursor:pointer;
+    }
+
+    .soft-btn.primary{
+      background:linear-gradient(135deg, #38bdf8, #2563eb);
+      color:#fff;
+      border:none;
+    }
+
+    .status-list{
+      display:grid;
+      gap:14px;
+    }
+
+    .status-box{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+      background:#fbfdff;
+    }
+
+    .status-box h4{
+      margin:0 0 8px;
+      font-size:16px;
+    }
+
+    .status-box p{
+      margin:0;
+      font-size:14px;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .chip-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .chip{
+      padding:9px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #bfdbfe;
+      font-size:13px;
+      font-weight:700;
     }
 
     .section{
-      padding:68px 0;
+      padding:70px 0;
     }
 
     .section-head{
       display:flex;
       justify-content:space-between;
-      align-items:end;
-      gap:18px;
-      margin-bottom:24px;
+      align-items:flex-end;
+      gap:20px;
       flex-wrap:wrap;
+      margin-bottom:24px;
     }
 
     .section-head h2{
@@ -311,8 +396,9 @@
 
     .section-head p{
       margin:0;
+      max-width:760px;
       color:var(--muted);
-      max-width:680px;
+      line-height:1.7;
     }
 
     .cards{
@@ -323,47 +409,96 @@
 
     .card{
       background:#fff;
-      border:1px solid var(--border);
+      border:1px solid var(--line);
       border-radius:22px;
       padding:22px;
       box-shadow:var(--shadow);
     }
 
-    .card-icon{
-      width:52px;
-      height:52px;
+    .icon{
+      width:54px;
+      height:54px;
       border-radius:16px;
       display:grid;
       place-items:center;
+      font-size:22px;
       background:linear-gradient(135deg, #e0f2fe, #dbeafe);
       margin-bottom:16px;
-      font-size:22px;
     }
 
     .card h3{
       margin:0 0 10px;
-      font-size:20px;
+      font-size:21px;
     }
 
     .card p{
       margin:0;
       color:var(--muted);
+      line-height:1.7;
       font-size:15px;
+    }
+
+    .report-table-wrap{
+      overflow:auto;
+      background:#fff;
+      border-radius:22px;
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:760px;
+    }
+
+    th, td{
+      padding:15px 16px;
+      text-align:left;
+      border-bottom:1px solid var(--line);
+      font-size:14px;
+    }
+
+    th{
+      background:#f8fbff;
+      color:#475569;
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .cta{
+      background:linear-gradient(135deg, #0f172a, #1d4ed8);
+      color:#fff;
+      border-radius:30px;
+      padding:34px;
+      box-shadow:0 26px 70px rgba(2,8,23,.2);
+    }
+
+    .cta h3{
+      margin:0 0 12px;
+      font-size:34px;
+      letter-spacing:-.8px;
+    }
+
+    .cta p{
+      margin:0 0 18px;
+      color:rgba(255,255,255,.85);
+      max-width:830px;
+      line-height:1.7;
     }
 
     .steps{
       display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:18px;
+      grid-template-columns:repeat(4, 1fr);
+      gap:16px;
+      margin-top:20px;
     }
 
     .step{
-      position:relative;
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius:22px;
-      padding:22px;
-      box-shadow:var(--shadow);
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:20px;
+      padding:18px;
     }
 
     .step-no{
@@ -372,143 +507,84 @@
       border-radius:50%;
       display:grid;
       place-items:center;
-      background:linear-gradient(135deg, var(--accent), var(--primary));
-      color:#fff;
+      background:rgba(255,255,255,.16);
       font-weight:800;
-      margin-bottom:14px;
+      margin-bottom:12px;
     }
 
     .step h4{
       margin:0 0 8px;
-      font-size:18px;
+      font-size:17px;
     }
 
     .step p{
       margin:0;
-      color:var(--muted);
       font-size:14px;
-    }
-
-    .list{
-      display:grid;
-      gap:10px;
-      margin-top:14px;
-    }
-
-    .list-item{
-      display:flex;
-      align-items:flex-start;
-      gap:10px;
-      padding:10px 0;
-      border-bottom:1px dashed #dbe1ea;
-    }
-
-    .tick{
-      flex:0 0 24px;
-      width:24px;
-      height:24px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      background:#ecfdf5;
-      color:var(--success);
-      font-weight:800;
-      margin-top:2px;
-    }
-
-    .cta{
-      background:linear-gradient(135deg, #0f172a, #1d4ed8);
-      color:#fff;
-      border-radius:28px;
-      padding:34px;
-      box-shadow:0 24px 60px rgba(2,8,23,.2);
-    }
-
-    .cta h3{
-      margin:0 0 10px;
-      font-size:32px;
-      letter-spacing:-.8px;
-    }
-
-    .cta p{
-      margin:0 0 18px;
-      color:rgba(255,255,255,.84);
-      max-width:760px;
+      color:rgba(255,255,255,.82);
+      line-height:1.6;
     }
 
     .footer{
-      padding:28px 0 46px;
+      padding:28px 0 44px;
+      text-align:center;
       color:#64748b;
       font-size:14px;
-      text-align:center;
     }
 
-    .notice{
-      margin-top:18px;
-      background:#fffbeb;
-      border:1px solid #fde68a;
-      color:#92400e;
-      padding:14px 16px;
-      border-radius:16px;
-      font-size:14px;
-    }
-
-    @media (max-width: 1040px){
-      .hero-grid,
-      .cards,
-      .steps{
+    @media (max-width: 1120px){
+      .hero-grid, .dash-grid, .cards, .steps{
         grid-template-columns:1fr 1fr;
-      }
-      .hero-card{
-        margin-top:8px;
       }
     }
 
     @media (max-width: 760px){
-      .hero{
-        padding-top:54px;
-      }
-      .hero-grid,
-      .cards,
-      .steps,
-      .hero-stats,
-      .mini-grid{
-        grid-template-columns:1fr;
-      }
       .nav-inner{
         min-height:auto;
         padding:14px 0;
-        align-items:flex-start;
         flex-direction:column;
+        align-items:flex-start;
       }
-      .nav-links{
-        gap:14px;
+
+      .hero-grid, .dash-grid, .cards, .steps, .hero-stats, .form-grid{
+        grid-template-columns:1fr;
       }
-      .section{
+
+      .hero{
         padding:54px 0;
       }
+
+      .section{
+        padding:56px 0;
+      }
+
       .cta{
         padding:24px;
       }
+
       .cta h3{
-        font-size:26px;
+        font-size:27px;
+      }
+
+      .brand{
+        font-size:18px;
       }
     }
   </style>
 </head>
 <body>
-  <header class="nav">
+
+  <header class="navbar">
     <div class="container nav-inner">
-      <a href="#" class="brand">
-        <div class="brand-mark">T</div>
-        <div>Tally to Excel Tool</div>
-      </a>
+      <div class="brand">
+        <div class="brand-logo">T</div>
+        <div>Tally to Excel Automation Tool</div>
+      </div>
 
       <nav class="nav-links">
+        <a href="#dashboard">Dashboard</a>
         <a href="#features">Features</a>
-        <a href="#workflow">Workflow</a>
         <a href="#reports">Reports</a>
-        <a href="#setup">Setup</a>
+        <a href="#deploy">Deploy</a>
       </nav>
     </div>
   </header>
@@ -517,20 +593,20 @@
     <div class="container hero-grid">
       <div>
         <div class="eyebrow">
-          <span class="dot"></span>
-          Professional data extraction and reporting workflow
+          <span class="pulse"></span>
+          Software-style landing page for Tally data automation
         </div>
 
         <h1>Tally to Excel Automation Tool</h1>
         <p>
-          Import Tally-exported files, standardize voucher data, preview transactions,
-          and generate audit-friendly Excel reports for purchase, sales, journal,
-          GST, ledger scrutiny, and reconciliation work.
+          Upload Tally-exported files, preview voucher data, select required reports,
+          and generate structured Excel outputs for purchase, sales, journal, GST,
+          ledger scrutiny, and office reconciliation work.
         </p>
 
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#setup">Use This Page</a>
-          <a class="btn btn-ghost" href="#reports">View Reports</a>
+          <a href="#dashboard" class="btn btn-primary">Open Dashboard</a>
+          <a href="https://your-streamlit-app-link-here" class="btn btn-outline" target="_blank">Launch Real Tool</a>
         </div>
 
         <div class="hero-stats">
@@ -540,163 +616,224 @@
           </div>
           <div class="stat">
             <strong>Excel</strong>
-            <span>Formatted multi-sheet export</span>
+            <span>Download-ready structured workbook</span>
           </div>
           <div class="stat">
-            <strong>CA</strong>
-            <span>Audit and GST office friendly</span>
+            <strong>CA Office</strong>
+            <span>Audit, GST and ledger review friendly</span>
           </div>
         </div>
       </div>
 
-      <div class="hero-card">
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">Quick Overview</div>
-            <div class="badge">Ready UI</div>
+      <div class="dashboard-shell">
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-top">
+              <h3>Upload & Configure</h3>
+              <div class="mini-badge">Demo UI</div>
+            </div>
+
+            <div class="upload-box">
+              <strong>Drop Tally Files Here</strong>
+              <p>Use CSV, XLSX, XLS, XLSM, or XML files exported from Tally.</p>
+              <div class="upload-actions">
+                <button class="soft-btn primary" type="button">Choose Files</button>
+                <button class="soft-btn" type="button">Sample Data</button>
+              </div>
+            </div>
+
+            <div style="height:14px"></div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label>Company Name</label>
+                <input type="text" placeholder="Enter company name" />
+              </div>
+
+              <div class="field">
+                <label>Financial Year</label>
+                <select>
+                  <option>2025-26</option>
+                  <option>2024-25</option>
+                  <option>2023-24</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>From Date</label>
+                <input type="date" />
+              </div>
+
+              <div class="field">
+                <label>To Date</label>
+                <input type="date" />
+              </div>
+
+              <div class="field">
+                <label>Report Type</label>
+                <select>
+                  <option>Purchase Register</option>
+                  <option>Sales Register</option>
+                  <option>Journal Register</option>
+                  <option>Ledger Summary</option>
+                  <option>GST Summary</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Export Format</label>
+                <select>
+                  <option>Excel (.xlsx)</option>
+                  <option>CSV (.csv)</option>
+                </select>
+              </div>
+
+              <div class="field full">
+                <label>Notes / Filters</label>
+                <textarea placeholder="Example: only expense journals, GST vouchers, purchase heads, or party-wise data"></textarea>
+              </div>
+            </div>
+
+            <div class="upload-actions" style="justify-content:flex-start; margin-top:18px;">
+              <button class="soft-btn primary" type="button">Generate Report</button>
+              <button class="soft-btn" type="button">Reset</button>
+            </div>
           </div>
 
-          <div class="mini-grid">
-            <div class="field">
-              <small>Input Types</small>
-              <strong>CSV, XLSX, XLS, XLSM, XML</strong>
+          <div class="dash-card">
+            <div class="dash-top">
+              <h3>Live Status</h3>
+              <div class="mini-badge">Preview</div>
             </div>
-            <div class="field">
-              <small>Output</small>
-              <strong>Formatted Excel Workbook</strong>
-            </div>
-            <div class="field">
-              <small>Core Use</small>
-              <strong>Voucher & Ledger Reporting</strong>
-            </div>
-            <div class="field">
-              <small>Audience</small>
-              <strong>CA, GST, Audit, Accounts</strong>
-            </div>
-          </div>
-        </div>
 
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">Sample Report Preview</div>
-            <div class="badge">Purchase Register</div>
-          </div>
+            <div class="status-list">
+              <div class="status-box">
+                <h4>Connection Status</h4>
+                <p>Tally data source not connected in GitHub Pages demo. Connect your real backend app for live extraction.</p>
+              </div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Voucher No.</th>
-                  <th>Ledger</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>01-04-2025</td>
-                  <td>PUR-001</td>
-                  <td>ABC Traders</td>
-                  <td>₹ 48,500</td>
-                </tr>
-                <tr>
-                  <td>03-04-2025</td>
-                  <td>JRN-004</td>
-                  <td>Freight Expense</td>
-                  <td>₹ 7,250</td>
-                </tr>
-                <tr>
-                  <td>05-04-2025</td>
-                  <td>PUR-006</td>
-                  <td>Raw Material Purchase</td>
-                  <td>₹ 1,12,900</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              <div class="status-box">
+                <h4>Selected Workflow</h4>
+                <p>Import file → preview vouchers → choose report → export structured Excel workbook.</p>
+              </div>
 
-          <div class="notice">
-            Note: This public page is a product landing UI. Actual Tally parsing / Excel generation logic
-            will run through your Python or Streamlit backend separately.
+              <div class="status-box">
+                <h4>Suggested Outputs</h4>
+                <p>Purchase Register, Sales Register, Journal Expenses, Ledger Summary, Party-wise analysis, GST summary.</p>
+              </div>
+            </div>
+
+            <div class="chip-row">
+              <div class="chip">Purchase</div>
+              <div class="chip">Sales</div>
+              <div class="chip">Journal</div>
+              <div class="chip">GST</div>
+              <div class="chip">Ledger</div>
+              <div class="chip">Audit Use</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="features">
+  <section class="section" id="dashboard">
     <div class="container">
       <div class="section-head">
         <div>
-          <h2>Core Highlights</h2>
+          <h2>Software Dashboard Preview</h2>
           <p>
-            Designed for professional reporting, structured extraction, and better presentation of Tally-based accounting data.
+            This section makes the page look like a real software product. You can keep this on GitHub Pages
+            and connect the actual Python or Streamlit application through the Launch Real Tool button.
+          </p>
+        </div>
+      </div>
+
+      <div class="report-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher No.</th>
+              <th>Voucher Type</th>
+              <th>Ledger / Party</th>
+              <th>Narration</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>01-04-2025</td>
+              <td>PUR-001</td>
+              <td>Purchase</td>
+              <td>ABC Traders</td>
+              <td>Raw material purchase</td>
+              <td>₹ 48,500</td>
+            </tr>
+            <tr>
+              <td>03-04-2025</td>
+              <td>JRN-004</td>
+              <td>Journal</td>
+              <td>Freight Expense</td>
+              <td>Transport and loading charges</td>
+              <td>₹ 7,250</td>
+            </tr>
+            <tr>
+              <td>05-04-2025</td>
+              <td>SAL-006</td>
+              <td>Sales</td>
+              <td>XYZ Agencies</td>
+              <td>Finished goods sale</td>
+              <td>₹ 1,12,900</td>
+            </tr>
+            <tr>
+              <td>07-04-2025</td>
+              <td>JRN-009</td>
+              <td>Journal</td>
+              <td>Office Expense</td>
+              <td>Rent and office utility expense</td>
+              <td>₹ 18,000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features" style="background:#edf4fb;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Main Features</h2>
+          <p>
+            Keep the public website informative and professional while the actual automation engine runs on your deployed backend app.
           </p>
         </div>
       </div>
 
       <div class="cards">
         <div class="card">
-          <div class="card-icon">📁</div>
-          <h3>Multi-file Import</h3>
+          <div class="icon">📂</div>
+          <h3>Multi-file Import UI</h3>
           <p>
-            Accept multiple Tally-exported files and present a cleaner workflow for review, filtering, and report preparation.
+            Professional upload box for Tally-exported file formats with a clean dashboard experience for office users.
           </p>
         </div>
 
         <div class="card">
-          <div class="card-icon">📊</div>
-          <h3>Structured Reporting</h3>
+          <div class="icon">📈</div>
+          <h3>Report Selection</h3>
           <p>
-            Generate purchase register, sales register, voucher register, expense analysis, GST summary, and party-wise reports.
+            Highlight purchase, sales, journal, GST, party-wise, and ledger reporting options directly on the landing page.
           </p>
         </div>
 
         <div class="card">
-          <div class="card-icon">🧾</div>
-          <h3>CA Office Utility</h3>
+          <div class="icon">🧾</div>
+          <h3>Excel Export Workflow</h3>
           <p>
-            Useful for GST reconciliation, ledger scrutiny, journal expense extraction, duplicate checking, and audit review.
+            Present the user journey clearly so clients and staff understand how raw Tally data becomes a structured Excel workbook.
           </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="workflow" style="background:#eef4fb;">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Simple Workflow</h2>
-          <p>
-            A clear and client-friendly process from Tally export to final Excel reporting.
-          </p>
-        </div>
-      </div>
-
-      <div class="steps">
-        <div class="step">
-          <div class="step-no">1</div>
-          <h4>Export from Tally</h4>
-          <p>Take CSV, Excel, or XML output from Tally depending on the report or voucher source available.</p>
-        </div>
-
-        <div class="step">
-          <div class="step-no">2</div>
-          <h4>Import the Files</h4>
-          <p>Upload one or multiple files and standardize the raw transaction structure into a common format.</p>
-        </div>
-
-        <div class="step">
-          <div class="step-no">3</div>
-          <h4>Filter and Review</h4>
-          <p>Search by narration, voucher type, ledger name, amount, date range, or category before final reporting.</p>
-        </div>
-
-        <div class="step">
-          <div class="step-no">4</div>
-          <h4>Export Final Workbook</h4>
-          <p>Create a polished multi-sheet Excel file ready for office review, GST work, audit files, or client delivery.</p>
         </div>
       </div>
     </div>
@@ -706,75 +843,73 @@
     <div class="container">
       <div class="section-head">
         <div>
-          <h2>Supported Reports</h2>
+          <h2>Recommended Reports</h2>
           <p>
-            The page is positioned around the report types most useful in accounts, tax, GST, and audit workflows.
+            These are the report modules you can later implement in Python, Power Query, or Streamlit backend logic.
           </p>
         </div>
       </div>
 
       <div class="cards">
         <div class="card">
-          <div class="card-icon">📚</div>
+          <div class="icon">🛒</div>
+          <h3>Purchase & Sales Reports</h3>
+          <p>
+            Purchase register, sales register, bill-wise party data, item-wise analysis, and summary grouping for reconciliation.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="icon">📚</div>
           <h3>Voucher & Ledger Reports</h3>
-          <div class="list">
-            <div class="list-item"><div class="tick">✓</div><div>Voucher Register</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Ledger Report</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Party-wise Summary</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Error Logs</div></div>
-          </div>
+          <p>
+            Voucher register, ledger summary, narration analysis, journal extraction, and account-head-wise drill down.
+          </p>
         </div>
 
         <div class="card">
-          <div class="card-icon">🛒</div>
-          <h3>Purchase / Sales / Journal</h3>
-          <div class="list">
-            <div class="list-item"><div class="tick">✓</div><div>Purchase Register</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Sales Register</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Journal Voucher Expense</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Expense Head Analysis</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">🧠</div>
-          <h3>Control & Review Reports</h3>
-          <div class="list">
-            <div class="list-item"><div class="tick">✓</div><div>Summary KPIs</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Suspicious Transactions</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>Duplicate Transactions</div></div>
-            <div class="list-item"><div class="tick">✓</div><div>GST Summary</div></div>
-          </div>
+          <div class="icon">🧠</div>
+          <h3>GST & Audit Review</h3>
+          <p>
+            GST summary, taxable value checks, duplicate checks, suspicious entry review, and audit support sheets.
+          </p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="setup" style="background:#eef4fb;">
+  <section class="section" id="deploy" style="background:#edf4fb;">
     <div class="container">
       <div class="cta">
-        <h3>How to fix the GitHub Pages site</h3>
+        <h3>How to make this a real working tool</h3>
         <p>
-          Root me <strong>index.html</strong> add karo, commit karo, aur GitHub Pages source ko same branch / root par rakho.
-          Isse README-style page ki jagah yeh professional landing page show hoga.
+          GitHub Pages sirf static HTML/CSS/JS page serve karta hai. Real Tally parsing, Excel generation,
+          and backend logic ke liye aapko Streamlit, Render, Railway, ya kisi Python hosting par actual app deploy karna hoga.
         </p>
 
-        <div class="list" style="color:#fff;">
-          <div class="list-item" style="border-color:rgba(255,255,255,.18)">
-            <div class="tick" style="background:rgba(255,255,255,.15); color:#fff;">1</div>
-            <div>Repo ke root folder me is code ko <strong>index.html</strong> naam se save karo.</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-no">1</div>
+            <h4>Keep GitHub Pages</h4>
+            <p>Use this page as your public website and product landing page.</p>
           </div>
-          <div class="list-item" style="border-color:rgba(255,255,255,.18)">
-            <div class="tick" style="background:rgba(255,255,255,.15); color:#fff;">2</div>
-            <div>Optional but recommended: ek blank file <strong>.nojekyll</strong> bhi add kar do.</div>
+
+          <div class="step">
+            <div class="step-no">2</div>
+            <h4>Deploy Backend App</h4>
+            <p>Run your Python / Streamlit tool separately on a real app hosting platform.</p>
           </div>
-          <div class="list-item" style="border-color:rgba(255,255,255,.18)">
-            <div class="tick" style="background:rgba(255,255,255,.15); color:#fff;">3</div>
-            <div>Commit and push to <strong>main</strong>.</div>
+
+          <div class="step">
+            <div class="step-no">3</div>
+            <h4>Replace Button Link</h4>
+            <p>Update the Launch Real Tool button with your real deployed app link.</p>
           </div>
-          <div class="list-item" style="border-color:rgba(255,255,255,.18)">
-            <div class="tick" style="background:rgba(255,255,255,.15); color:#fff;">4</div>
-            <div>GitHub Pages ko refresh hone do, phir hard refresh karke page check karo.</div>
+
+          <div class="step">
+            <div class="step-no">4</div>
+            <h4>Connect Workflow</h4>
+            <p>Users land here first, then open the actual report-generation tool from this page.</p>
           </div>
         </div>
       </div>
@@ -782,9 +917,8 @@
   </section>
 
   <footer class="footer">
-    <div class="container">
-      Tally to Excel Automation Tool • Professional landing page for GitHub Pages
-    </div>
+    Tally to Excel Automation Tool • GitHub Pages landing page with software-style dashboard UI
   </footer>
+
 </body>
 </html>
