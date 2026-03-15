@@ -29,6 +29,7 @@ class ReportConfig:
     default_sheet_order: list[str] = field(
         default_factory=lambda: [
             "Dashboard",
+            "Summary KPIs",
             "Error Logs",
             "Ledger Report",
             "Voucher Register",
@@ -38,6 +39,8 @@ class ReportConfig:
             "Journal Voucher Expense",
             "GST Summary",
             "Party-wise Summary",
+            "Suspicious Transactions",
+            "Duplicate Transactions",
         ]
     )
 
