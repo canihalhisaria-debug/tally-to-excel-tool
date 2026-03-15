@@ -1,349 +1,445 @@
-from __future__ import annotations
-
-from datetime import datetime
-from io import StringIO
+from io import BytesIO
+from typing import List, Optional
+import xml.etree.ElementTree as ET
 
 import pandas as pd
-import streamlit as st
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
-from src.tally_tool import TallyPhaseOneService
+app = FastAPI(title="Tally to Excel Backend", version="1.0.0")
 
-st.set_page_config(page_title="Tally to Excel Automation Tool", page_icon="📊", layout="wide")
+# Development ke liye open rakha hai.
+# Production me apna exact GitHub Pages domain hi allow karna.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-st.markdown(
+COLUMN_ALIASES = {
+    "date": ["date", "voucher date", "dt"],
+    "voucher_no": ["voucher no", "voucher number", "vch no", "vch number", "voucher_no", "voucher no."],
+    "voucher_type": ["voucher type", "vch type", "voucher_type", "voucher typename"],
+    "party_ledger": ["party ledger", "party", "party name", "party_ledger", "party ledger name"],
+    "ledger": ["ledger", "ledger name", "particulars", "account", "account head"],
+    "narration": ["narration", "remarks", "description"],
+    "amount": ["amount", "amt", "value"],
+    "debit": ["debit", "dr", "debit amount"],
+    "credit": ["credit", "cr", "credit amount"],
+    "gstin": ["gstin", "gst no", "gst"],
+    "item_name": ["item name", "stock item", "item"],
+    "quantity": ["qty", "quantity"],
+    "rate": ["rate"],
+}
+
+REQUIRED_COLUMNS = [
+    "date",
+    "voucher_no",
+    "voucher_type",
+    "party_ledger",
+    "ledger",
+    "narration",
+    "amount",
+]
+
+
+def clean_col_name(col: str) -> str:
+    return str(col).strip().lower().replace("_", " ")
+
+
+def to_number(value):
+    if pd.isna(value):
+        return 0.0
+    text = str(value).strip().replace(",", "")
+    if text == "":
+        return 0.0
+
+    negative = False
+    if text.startswith("(") and text.endswith(")"):
+        negative = True
+        text = text[1:-1]
+
+    try:
+        num = float(text)
+        return -num if negative else num
+    except Exception:
+        return 0.0
+
+
+def parse_date_series(series: pd.Series) -> pd.Series:
+    # Pehle normal parse
+    parsed = pd.to_datetime(series, errors="coerce", dayfirst=True)
+
+    # Jo parse nahi hua aur 8 digit format hai, use YYYYMMDD maan lo
+    mask = parsed.isna()
+    if mask.any():
+        raw = series.astype(str).str.strip()
+        eight_digit = raw.str.match(r"^\d{8}$", na=False)
+        idx = mask & eight_digit
+        if idx.any():
+            parsed.loc[idx] = pd.to_datetime(raw.loc[idx], format="%Y%m%d", errors="coerce")
+
+    return parsed
+
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    original_cols = list(df.columns)
+    cleaned_map = {col: clean_col_name(col) for col in original_cols}
+
+    rename_map = {}
+    for canonical, aliases in COLUMN_ALIASES.items():
+        for original, cleaned in cleaned_map.items():
+            if cleaned in aliases:
+                rename_map[original] = canonical
+                break
+
+    df = df.rename(columns=rename_map)
+
+    # Ensure columns exist
+    for col in set(REQUIRED_COLUMNS + ["debit", "credit", "gstin", "item_name", "quantity", "rate"]):
+        if col not in df.columns:
+            df[col] = None
+
+    # Dates
+    df["date"] = parse_date_series(df["date"])
+
+    # Numbers
+    if "debit" in df.columns:
+        df["debit"] = df["debit"].apply(to_number)
+    if "credit" in df.columns:
+        df["credit"] = df["credit"].apply(to_number)
+
+    if "amount" in df.columns:
+        df["amount"] = df["amount"].apply(to_number)
+
+    # Agar amount khaali ho to debit/credit se derive karo
+    if df["amount"].fillna(0).abs().sum() == 0:
+        if "debit" in df.columns and "credit" in df.columns:
+            df["amount"] = df["debit"].fillna(0) - df["credit"].fillna(0)
+        elif "debit" in df.columns:
+            df["amount"] = df["debit"].fillna(0)
+        elif "credit" in df.columns:
+            df["amount"] = -df["credit"].fillna(0)
+
+    # Text cleanup
+    for col in ["voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "gstin", "item_name"]:
+        df[col] = df[col].fillna("").astype(str).str.strip()
+
+    if "quantity" in df.columns:
+        df["quantity"] = df["quantity"].apply(to_number)
+    if "rate" in df.columns:
+        df["rate"] = df["rate"].apply(to_number)
+
+    # Display amount
+    df["abs_amount"] = df["amount"].abs()
+
+    return df
+
+
+def parse_tally_xml(file_bytes: bytes) -> pd.DataFrame:
     """
-<style>
-.stApp {
-    background: #f4f7fb;
-}
-.main-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0;
-}
-.sub-title {
-    color: #5a6a85;
-    margin-top: .2rem;
-}
-.card {
-    border: 1px solid #e6e9ef;
-    border-radius: 12px;
-    padding: 0.9rem 1rem;
-    background: #fafbfd;
-}
-.topbar {
-    background: linear-gradient(135deg, #0f172a, #1d4ed8);
-    color: #ffffff;
-    border-radius: 18px;
-    padding: 20px 24px;
-    margin-bottom: 16px;
-}
-.topbar h2 {
-    margin: 0;
-    font-size: 1.7rem;
-}
-.topbar p {
-    margin: .4rem 0 0;
-    opacity: .92;
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-st.markdown(
+    Basic Tally XML parser.
+    Standard Tally voucher export ke common nodes handle karta hai.
+    Exact company export ke hisaab se kabhi customization lag sakti hai.
     """
-<div class='topbar'>
-  <h2>Tally to Excel Automation Tool</h2>
-  <p>Export vouchers, ledgers, purchase entries, sales entries, and journal data from Tally into Excel in a structured way.</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+    try:
+        root = ET.fromstring(file_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"XML parse error: {str(e)}")
 
-if "export_history" not in st.session_state:
-    st.session_state.export_history = []
-if "presets" not in st.session_state:
-    st.session_state.presets = {}
-if "connection_status" not in st.session_state:
-    st.session_state.connection_status = "Tally connection not checked yet."
-if "export_status" not in st.session_state:
-    st.session_state.export_status = "No export started."
+    rows = []
 
-default_export_form = {
-    "company": "Choose Company",
-    "report_type": "All Vouchers",
-    "from_date": None,
-    "to_date": None,
-    "voucher_types": ["Purchase", "Sales", "Journal"],
-    "export_format": "Excel (.xlsx)",
-    "sort_by": "Date",
-    "remarks": "",
-}
-for key, value in default_export_form.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+    vouchers = root.findall(".//VOUCHER")
+    for voucher in vouchers:
+        date = voucher.findtext("DATE", default="")
+        voucher_no = voucher.findtext("VOUCHERNUMBER", default="")
+        voucher_type = voucher.findtext("VOUCHERTYPENAME", default="")
+        narration = voucher.findtext("NARRATION", default="")
+        party_ledger = voucher.findtext("PARTYLEDGERNAME", default="")
 
+        ledger_lists = voucher.findall(".//ALLLEDGERENTRIES.LIST")
+        if not ledger_lists:
+            ledger_lists = voucher.findall(".//LEDGERENTRIES.LIST")
 
-def _reset_export_form() -> None:
-    for key, value in default_export_form.items():
-        st.session_state[key] = value
-    st.session_state.connection_status = "Tally connection not checked yet."
-    st.session_state.export_status = "No export started."
-
-with st.sidebar:
-    st.header("Workflow")
-    st.markdown(
-        """
-1. Upload one or more Tally export files (`.csv`, `.xlsx`, `.xls`, `.xml`).
-2. Apply filters and optional saved presets.
-3. Review previews, KPIs, suspicious flags, and duplicates.
-4. Export workbook and track export history.
-        """
-    )
-
-    st.subheader("Branding")
-    brand_name = st.text_input("Brand name", value="Your Business")
-    logo_file = st.file_uploader("Upload logo (PNG/JPG)", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
-    if logo_file:
-        st.image(logo_file.getvalue(), caption=f"{brand_name} logo", use_container_width=True)
-
-uploaded = st.file_uploader(
-    "Upload Tally export file(s)",
-    type=["csv", "xlsx", "xls", "xlsm", "xml"],
-    accept_multiple_files=True,
-)
-
-main_col, status_col = st.columns([2, 1], gap="large")
-with main_col:
-    st.subheader("Export Configuration")
-    c1, c2 = st.columns(2)
-    with c1:
-        company = st.selectbox(
-            "Select Company",
-            ["Choose Company", "ABC Traders Pvt. Ltd.", "XYZ Enterprises", "Hisaria & Associates Demo Co."],
-            key="company",
-        )
-    with c2:
-        report_type = st.selectbox(
-            "Report Type",
-            ["All Vouchers", "Purchase Register", "Sales Register", "Journal Register", "Ledger Extract", "GST Data Export"],
-            key="report_type",
-        )
-
-    c3, c4 = st.columns(2)
-    with c3:
-        st.date_input("From Date", key="from_date")
-    with c4:
-        st.date_input("To Date", key="to_date")
-
-    st.multiselect(
-        "Select Voucher Types",
-        ["Purchase", "Sales", "Journal", "Receipt", "Payment", "Contra"],
-        key="voucher_types",
-    )
-
-    c5, c6 = st.columns(2)
-    with c5:
-        st.selectbox("Export Format", ["Excel (.xlsx)", "CSV (.csv)", "XML"], key="export_format")
-    with c6:
-        st.selectbox("Sort By", ["Date", "Voucher Number", "Ledger Name", "Amount"], key="sort_by")
-
-    st.text_area(
-        "Remarks / Filter Notes",
-        placeholder="Example: Export only GST vouchers, journal expenses, or purchase-related entries...",
-        key="remarks",
-    )
-
-    a1, a2 = st.columns(2)
-    with a1:
-        if st.button("Start Export", type="primary", use_container_width=True):
-            st.session_state.connection_status = "Connected to Tally successfully."
-            st.session_state.export_status = (
-                f"Export started for {company} | Report: {report_type}."
+        if ledger_lists:
+            for entry in ledger_lists:
+                ledger_name = entry.findtext("LEDGERNAME", default="")
+                amount = to_number(entry.findtext("AMOUNT", default="0"))
+                rows.append(
+                    {
+                        "date": date,
+                        "voucher_no": voucher_no,
+                        "voucher_type": voucher_type,
+                        "party_ledger": party_ledger,
+                        "ledger": ledger_name,
+                        "narration": narration,
+                        "amount": amount,
+                    }
+                )
+        else:
+            rows.append(
+                {
+                    "date": date,
+                    "voucher_no": voucher_no,
+                    "voucher_type": voucher_type,
+                    "party_ledger": party_ledger,
+                    "ledger": "",
+                    "narration": narration,
+                    "amount": 0.0,
+                }
             )
-    with a2:
-        if st.button("Reset", use_container_width=True):
-            _reset_export_form()
-            st.rerun()
 
-with status_col:
-    st.subheader("Live Status")
-    st.info(f"**Connection Status**\n\n{st.session_state.connection_status}")
-    st.info(f"**Export Progress**\n\n{st.session_state.export_status}")
-    st.markdown("### Structured Excel Output")
-    st.caption("Export data in column-wise format for reconciliation, GST checking, and reporting.")
-    st.markdown("### Purchase + Journal Extraction")
-    st.caption("Useful where expenses are booked through journal vouchers and need consolidated export.")
-    st.markdown("### CA Office Friendly")
-    st.caption("Designed for audit work, GST reconciliation, ledger scrutiny, and return preparation.")
-    st.caption("Version 1.0 • Tally to Excel Automation Dashboard")
+    if not rows:
+        raise HTTPException(status_code=400, detail="No vouchers found in XML file.")
+
+    df = pd.DataFrame(rows)
+    return normalize_columns(df)
 
 
-def _demo_payload() -> list[tuple[str, bytes]]:
-    """Provide a tiny in-memory dataset so users can explore the UI without real files."""
+async def load_file_to_df(file: UploadFile) -> pd.DataFrame:
+    filename = file.filename.lower()
+    content = await file.read()
 
-    sample_csv = StringIO(
-        "Date,Voucher Type,Voucher No,Ledger,Party,Narration,Debit,Credit\n"
-        "2025-01-01,Sales,1001,Sales A/c,ABC Traders,Invoice INV-1001,25000,0\n"
-        "2025-01-01,Receipt,RCPT-01,Cash,ABC Traders,Payment received,0,15000\n"
-        "2025-01-02,Purchase,2001,Purchase A/c,XYZ Supplies,Office stationery,0,5200\n"
-        "2025-01-03,Journal,JV-09,Indirect Expenses,,Round-off entry,450,0\n"
-        "2025-01-03,Sales,1002,Sales A/c,LMN Retail,Invoice INV-1002,18000,0\n"
-    ).getvalue()
-    return [("demo_transactions.csv", sample_csv.encode("utf-8"))]
+    try:
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content))
+            return normalize_columns(df)
 
-source_payload = [(f.name, f.getvalue()) for f in uploaded] if uploaded else []
-if not source_payload:
-    st.info("Upload at least one file to begin, or use demo mode to preview the software.")
-    if st.button("Try demo data"):
-        source_payload = _demo_payload()
+        if filename.endswith(".xlsx") or filename.endswith(".xlsm"):
+            df = pd.read_excel(BytesIO(content))
+            return normalize_columns(df)
 
-if not source_payload:
-    st.stop()
+        if filename.endswith(".xls"):
+            df = pd.read_excel(BytesIO(content), engine="xlrd")
+            return normalize_columns(df)
 
-service = TallyPhaseOneService()
+        if filename.endswith(".xml"):
+            return parse_tally_xml(content)
 
-try:
-    standardized, report_bundle, excel_bytes = service.run(source_payload)
-except Exception as exc:
-    st.error(f"Failed to process uploaded files: {exc}")
-    st.stop()
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Use CSV, XLSX, XLSM, XLS, or XML.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File reading failed: {str(e)}")
 
-transactions = standardized.transactions.copy()
 
-st.subheader("Filter Studio")
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    voucher_options = sorted([x for x in transactions["Voucher Type"].dropna().astype(str).unique()]) if "Voucher Type" in transactions else []
-    selected_vouchers = st.multiselect("Voucher Type", options=voucher_options, default=[])
-with col2:
-    ledger_options = sorted([x for x in transactions["Ledger"].dropna().astype(str).unique()]) if "Ledger" in transactions else []
-    selected_ledgers = st.multiselect("Ledger", options=ledger_options, default=[])
-with col3:
-    party_options = sorted([x for x in transactions["Party"].dropna().astype(str).unique()]) if "Party" in transactions else []
-    selected_parties = st.multiselect("Party", options=party_options, default=[])
-with col4:
-    amount_series = pd.to_numeric(transactions.get("Amount", pd.Series(dtype=float)), errors="coerce").dropna()
-    if amount_series.empty:
-        min_amt, max_amt = 0.0, 0.0
-    else:
-        min_amt, max_amt = float(amount_series.min()), float(amount_series.max())
+def apply_filters(
+    df: pd.DataFrame,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    voucher_types: Optional[str] = None,
+) -> pd.DataFrame:
+    result = df.copy()
 
-    if min_amt < max_amt:
-        amount_range = st.slider("Amount Range", min_value=min_amt, max_value=max_amt, value=(min_amt, max_amt))
-    else:
-        amount_range = (min_amt, max_amt)
-        st.caption("Amount range filter is fixed because all transactions have the same amount.")
+    if from_date:
+        fd = pd.to_datetime(from_date, errors="coerce")
+        if pd.notna(fd):
+            result = result[result["date"] >= fd]
 
-selected_dates = None
-if "Date" in transactions and transactions["Date"].notna().any():
-    min_date = transactions["Date"].min().date()
-    max_date = transactions["Date"].max().date()
-    selected_dates = st.date_input("Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+    if to_date:
+        td = pd.to_datetime(to_date, errors="coerce")
+        if pd.notna(td):
+            result = result[result["date"] <= td]
 
-search_text = st.text_input("Preview search (Narration / Voucher No / Ledger)", value="").strip().lower()
+    if voucher_types:
+        vt_list = [x.strip().lower() for x in voucher_types.split(",") if x.strip()]
+        if vt_list:
+            result = result[
+                result["voucher_type"].str.lower().apply(lambda x: any(v in x for v in vt_list))
+            ]
 
-preset_col1, preset_col2, preset_col3 = st.columns([2, 2, 1])
-with preset_col1:
-    preset_name = st.text_input("Preset name", value="")
-with preset_col2:
-    preset_options = ["-- Select preset --"] + sorted(st.session_state.presets.keys())
-    selected_preset = st.selectbox("Saved presets", options=preset_options)
-with preset_col3:
-    if st.button("Save preset") and preset_name:
-        st.session_state.presets[preset_name] = {
-            "vouchers": selected_vouchers,
-            "ledgers": selected_ledgers,
-            "parties": selected_parties,
-            "amount_range": amount_range,
-            "search": search_text,
-        }
-        st.success(f"Saved preset: {preset_name}")
+    return result
 
-if st.button("Apply selected preset") and selected_preset != "-- Select preset --":
-    preset = st.session_state.presets[selected_preset]
-    selected_vouchers = [v for v in preset["vouchers"] if v in voucher_options]
-    selected_ledgers = [l for l in preset["ledgers"] if l in ledger_options]
-    selected_parties = [p for p in preset["parties"] if p in party_options]
-    amount_range = preset["amount_range"]
-    search_text = preset["search"]
-    st.info(f"Applied preset: {selected_preset}. Re-run or re-select controls to refine.")
 
-filtered = transactions.copy()
-if selected_vouchers:
-    filtered = filtered[filtered["Voucher Type"].astype(str).isin(selected_vouchers)]
-if selected_ledgers:
-    filtered = filtered[filtered["Ledger"].astype(str).isin(selected_ledgers)]
-if selected_parties:
-    filtered = filtered[filtered["Party"].astype(str).isin(selected_parties)]
-if not filtered.empty:
-    filtered = filtered[(filtered["Amount"] >= amount_range[0]) & (filtered["Amount"] <= amount_range[1])]
-if selected_dates and isinstance(selected_dates, tuple) and len(selected_dates) == 2 and "Date" in filtered:
-    start_date, end_date = pd.to_datetime(selected_dates[0]), pd.to_datetime(selected_dates[1])
-    filtered = filtered[(filtered["Date"] >= start_date) & (filtered["Date"] <= end_date)]
-if search_text:
-    search_mask = pd.Series([False] * len(filtered), index=filtered.index)
-    for col in ("Narration", "Voucher No", "Ledger"):
-        if col in filtered.columns:
-            search_mask = search_mask | filtered[col].astype(str).str.lower().str.contains(search_text, na=False)
-    filtered = filtered[search_mask]
+def build_purchase_register(df: pd.DataFrame) -> pd.DataFrame:
+    mask = df["voucher_type"].str.lower().str.contains("purchase", na=False)
+    cols = ["date", "voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "abs_amount"]
+    out = df.loc[mask, cols].copy()
+    out = out.rename(columns={"abs_amount": "amount"})
+    return out.sort_values(["date", "voucher_no"], na_position="last")
 
-st.subheader("Summary KPIs")
-kpi_df = report_bundle.reports.get("Summary KPIs", pd.DataFrame(columns=["KPI", "Value"]))
-kpi_cols = st.columns(min(4, max(1, len(kpi_df))))
-for idx, row in kpi_df.head(4).iterrows():
-    kpi_cols[idx].metric(str(row["KPI"]), f"{row['Value']:,}" if isinstance(row["Value"], (int, float)) else row["Value"])
 
-with st.expander("All KPI metrics", expanded=False):
-    st.dataframe(kpi_df, use_container_width=True, height=220)
+def build_sales_register(df: pd.DataFrame) -> pd.DataFrame:
+    mask = df["voucher_type"].str.lower().str.contains("sales|sale", na=False)
+    cols = ["date", "voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "abs_amount"]
+    out = df.loc[mask, cols].copy()
+    out = out.rename(columns={"abs_amount": "amount"})
+    return out.sort_values(["date", "voucher_no"], na_position="last")
 
-st.subheader("Preview Search Results")
-st.caption(f"Showing {len(filtered)} rows after filters (out of {len(transactions)}).")
-st.dataframe(filtered.head(200), use_container_width=True, height=280)
 
-flags_col, dup_col = st.columns(2)
-with flags_col:
-    st.markdown("### 🚩 Suspicious Transaction Flags")
-    suspicious_df = report_bundle.reports.get("Suspicious Transactions", pd.DataFrame())
-    st.dataframe(suspicious_df.head(200), use_container_width=True, height=280)
-with dup_col:
-    st.markdown("### 🧬 Duplicate Detection")
-    duplicates_df = report_bundle.reports.get("Duplicate Transactions", pd.DataFrame())
-    st.dataframe(duplicates_df.head(200), use_container_width=True, height=280)
+def build_journal_register(df: pd.DataFrame) -> pd.DataFrame:
+    mask = df["voucher_type"].str.lower().str.contains("journal", na=False)
+    cols = ["date", "voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "amount", "abs_amount"]
+    out = df.loc[mask, cols].copy()
+    out = out.sort_values(["date", "voucher_no"], na_position="last")
+    return out
 
-st.subheader("Generated Reports")
-for report_name, report_df in report_bundle.reports.items():
-    with st.expander(f"{report_name} ({len(report_df)} rows)", expanded=report_name == "Dashboard"):
-        st.dataframe(report_df, use_container_width=True, height=240)
 
-filename = f"tally_extended_reports_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-clicked = st.download_button(
-    label="⬇️ Download Formatted Excel Workbook",
-    data=excel_bytes,
-    file_name=filename,
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
-if clicked:
-    st.session_state.export_history.insert(
-        0,
-        {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "File": filename,
-            "Brand": brand_name,
-            "Rows Exported": len(filtered),
-            "Suspicious Rows": len(report_bundle.reports.get("Suspicious Transactions", pd.DataFrame())),
-        },
+def build_ledger_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame(columns=["ledger", "entry_count", "total_amount"])
+
+    out = (
+        df.groupby("ledger", dropna=False)
+        .agg(entry_count=("ledger", "count"), total_amount=("abs_amount", "sum"))
+        .reset_index()
+        .sort_values("total_amount", ascending=False)
+    )
+    return out
+
+
+def build_gst_summary(df: pd.DataFrame) -> pd.DataFrame:
+    work = df.copy()
+    work["ledger_lower"] = work["ledger"].str.lower()
+
+    def total_for(keyword_list: List[str]) -> float:
+        mask = work["ledger_lower"].apply(lambda x: any(k in x for k in keyword_list))
+        return float(work.loc[mask, "abs_amount"].sum())
+
+    summary = pd.DataFrame(
+        [
+            {"particulars": "CGST", "amount": total_for(["cgst"])},
+            {"particulars": "SGST", "amount": total_for(["sgst"])},
+            {"particulars": "IGST", "amount": total_for(["igst"])},
+            {"particulars": "CESS", "amount": total_for(["cess"])},
+        ]
     )
 
-st.subheader("Export History")
-if st.session_state.export_history:
-    st.dataframe(pd.DataFrame(st.session_state.export_history), use_container_width=True, height=220)
-else:
-    st.info("No exports recorded yet. Download a workbook to populate history.")
+    summary.loc[len(summary)] = {"particulars": "Total GST", "amount": float(summary["amount"].sum())}
 
-st.success("Ready: polished UI, preview search, presets, anomaly reports, KPI dashboard, and export history are enabled.")
+    return summary
 
-if st.checkbox("Show schema details", value=False):
-    schema_df = pd.DataFrame({"Column": standardized.transactions.columns, "Dtype": standardized.transactions.dtypes.astype(str)})
-    st.dataframe(schema_df, use_container_width=True)
+
+def format_workbook(writer, df_map: dict):
+    header_fill = PatternFill("solid", fgColor="1D4ED8")
+    header_font = Font(color="FFFFFF", bold=True)
+    thin = Side(style="thin", color="D1D5DB")
+
+    for sheet_name in df_map:
+        ws = writer.sheets[sheet_name]
+
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = ws.dimensions
+
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        # Auto width
+        for col_cells in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col_cells[0].column)
+            for cell in col_cells:
+                value = "" if cell.value is None else str(cell.value)
+                if len(value) > max_len:
+                    max_len = len(value)
+            ws.column_dimensions[col_letter].width = min(max(max_len + 2, 12), 35)
+
+
+def build_excel_file(df: pd.DataFrame, report_type: str) -> BytesIO:
+    output = BytesIO()
+
+    master_cols = ["date", "voucher_no", "voucher_type", "party_ledger", "ledger", "narration", "amount", "abs_amount"]
+
+    purchase_df = build_purchase_register(df)
+    sales_df = build_sales_register(df)
+    journal_df = build_journal_register(df)
+    ledger_summary_df = build_ledger_summary(df)
+    gst_summary_df = build_gst_summary(df)
+
+    report_type = (report_type or "all").strip().lower()
+
+    sheet_map = {}
+
+    if report_type == "purchase_register":
+        sheet_map["Purchase Register"] = purchase_df
+    elif report_type == "sales_register":
+        sheet_map["Sales Register"] = sales_df
+    elif report_type == "journal_register":
+        sheet_map["Journal Register"] = journal_df
+    elif report_type == "ledger_summary":
+        sheet_map["Ledger Summary"] = ledger_summary_df
+    elif report_type == "gst_summary":
+        sheet_map["GST Summary"] = gst_summary_df
+    else:
+        sheet_map["Master Data"] = df[master_cols].sort_values(["date", "voucher_no"], na_position="last")
+        sheet_map["Purchase Register"] = purchase_df
+        sheet_map["Sales Register"] = sales_df
+        sheet_map["Journal Register"] = journal_df
+        sheet_map["Ledger Summary"] = ledger_summary_df
+        sheet_map["GST Summary"] = gst_summary_df
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for sheet_name, sheet_df in sheet_map.items():
+            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name)
+        format_workbook(writer, sheet_map)
+
+    output.seek(0)
+    return output
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "message": "Backend running"}
+
+
+@app.post("/preview")
+async def preview_file(
+    file: UploadFile = File(...),
+    from_date: Optional[str] = Form(None),
+    to_date: Optional[str] = Form(None),
+    voucher_types: Optional[str] = Form(None),
+):
+    df = await load_file_to_df(file)
+    df = apply_filters(df, from_date=from_date, to_date=to_date, voucher_types=voucher_types)
+
+    preview_df = df.copy()
+    if "date" in preview_df.columns:
+        preview_df["date"] = preview_df["date"].dt.strftime("%Y-%m-%d")
+
+    preview_df = preview_df.head(100)
+
+    return JSONResponse(
+        {
+            "rows": preview_df.to_dict(orient="records"),
+            "columns": list(preview_df.columns),
+            "total_rows": int(len(df)),
+        }
+    )
+
+
+@app.post("/process")
+async def process_file(
+    file: UploadFile = File(...),
+    report_type: str = Form("all"),
+    from_date: Optional[str] = Form(None),
+    to_date: Optional[str] = Form(None),
+    voucher_types: Optional[str] = Form(None),
+):
+    df = await load_file_to_df(file)
+    df = apply_filters(df, from_date=from_date, to_date=to_date, voucher_types=voucher_types)
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="No data found after applying filters.")
+
+    excel_file = build_excel_file(df, report_type=report_type)
+
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="tally_report_{report_type}.xlsx"'},
+    )

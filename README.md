@@ -1,13 +1,13 @@
 # Tally to Excel Automation Tool
 
-Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
+Backend API built with **Python + FastAPI + pandas + openpyxl**.
 
 ## Extended Features
 - Import one or multiple Tally-exported files (`.csv`, `.xlsx`, `.xls`, `.xlsm`, `.xml`)
 - Standardize transaction columns into a canonical dataset
-- Polished Streamlit UI with branding/logo support
-- Better interactive filters with saved presets
-- Preview search for Narration/Voucher/Ledger
+- FastAPI endpoints for file preview and processing
+- Date/voucher-type filters for controlled report generation
+- JSON preview response for first 100 rows
 - Generate reports:
   - Dashboard
   - Summary KPIs
@@ -22,11 +22,11 @@ Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
   - Journal Voucher Expense
   - GST Summary
   - Party-wise Summary
-- Export a formatted multi-sheet Excel workbook with export history tracking in UI
+- Export a formatted multi-sheet Excel workbook with styled sheets
 - Modular architecture prepared for future phases
 
 ## Tech Stack
-- Streamlit (local UI)
+- FastAPI (backend API)
 - pandas (data processing)
 - openpyxl (formatted Excel generation)
 
@@ -51,18 +51,18 @@ Phase 1 local application built with **Python + Streamlit + pandas + openpyxl**.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run app.py
+uvicorn app:app --reload
 ```
 
 
 ## Public Preview URL (Tunnel)
-You can expose the local Streamlit app with a temporary public URL:
+You can expose the local FastAPI app with a temporary public URL:
 
 ```bash
 bash scripts/start_public_preview.sh 8501
 ```
 
-This script starts Streamlit and then attempts a tunnel in this order:
+This script starts the app server and then attempts a tunnel in this order:
 1. `cloudflared` quick tunnel
 2. downloaded `/tmp/cloudflared`
 3. `npx localtunnel`
